@@ -31,27 +31,20 @@ jobs:
       - name: Install production dependencies
         run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
+      - name: Create production environment
+        env:
+          PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
+        run: |
+          if [ -z "$PRODUCTION_ENV_FILE" ]; then
+            echo "PRODUCTION_ENV_FILE secret is missing."
+            exit 1
+          fi
+          printf '%s' "$PRODUCTION_ENV_FILE" > .env
+
       - name: Deploy application
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: ${{ secrets.FTP_PORT }}
-          protocol: ftp
-          local-dir: ./
-          server-dir: Feedback/
-          state-name: .feedback-deploy-state.json
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            **/.claude/**
-            **/database/**
-            **/logs/**
-            **/sentiment_ml/**
-            **/tests/**
-            .env
-            database.sql
-            start_dev_server.bat
-            start_dev_server.ps1
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+        run: python deployment/ftp_deploy.py
