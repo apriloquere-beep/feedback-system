@@ -352,7 +352,7 @@ INSERT INTO `system_settings` (`setting_key`, `setting_value`, `updated_by`) VAL
   ('admin_auto_resolve_positive_feedback', '0', NULL);
 
 INSERT INTO `admin_users` (`username`, `full_name`, `email`, `password_hash`, `role`, `status`) VALUES
-  ('SFMS_Admin', 'Super Admin', 'admin@web_system.local', '$2y$10$QJ0xgY7NnWkM7xZV0m0vQO1V2Lr9pQ4dN8lVf4h2M7xY6bZ9d1e7K', 'super_admin', 'active');
+  ('SFMS_Admin', 'Super Admin', 'admin@web_system.local', '$2y$10$h5E8xeckEVa/BUp61F1VZ.hVi9H4N7RKHdWDkrdXQKVyDiMIX9QPS', 'super_admin', 'active');
 
 -- --------------------------------------------------------------------------
 -- 6. Administrator provisioning
