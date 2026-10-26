@@ -6,8 +6,8 @@ define('DEBUG_MODE', false); // Set to true for development
 
 // QR entry configuration. Replace the URL with the official hosted HTTPS URL
 // and disable local URLs when production deployment is ready.
-define('FEEDBACK_QR_ENTRY_URL', 'http://localhost/Feedback/qr-entry.php');
-define('FEEDBACK_QR_ALLOW_LOCAL_URL', true);
+define('FEEDBACK_QR_ENTRY_URL', 'https://hydromis.dcsbisu.com/feedback-system/qr-entry.php');
+define('FEEDBACK_QR_ALLOW_LOCAL_URL', false);
 
 // Store and generate application timestamps on one clearly defined clock.
 // Asia/Manila has a fixed UTC+08:00 offset and does not observe DST.
