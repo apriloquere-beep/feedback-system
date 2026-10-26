@@ -40,7 +40,6 @@ function loadEnvironmentFromFile(string $path): void
 }
 
 loadEnvironmentFromFile(__DIR__ . '/../.env');
-loadEnvironmentFromFile(__DIR__ . '/../.env.example');
 
 // Central PDO factory shared by pages and API handlers.
 function getPdo(): PDO

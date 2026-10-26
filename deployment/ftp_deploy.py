@@ -81,14 +81,6 @@ def ensure_directory(ftp, path):
 
 
 def deploy_file(ftp, local_path, remote_path):
-    try:
-        remote_size = ftp.size(str(remote_path))
-    except ftplib.all_errors:
-        remote_size = None
-
-    if remote_size == local_path.stat().st_size:
-        return False
-
     with local_path.open("rb") as source:
         ftp.storbinary(f"STOR {remote_path}", source)
     return True

@@ -21,10 +21,21 @@ function feedbackCopyMailConfig(): array
     $fromAddress = $read('MAIL_FROM_ADDRESS', $username);
     $fromName = $read('MAIL_FROM_NAME', 'SFMS');
 
+    // Never treat the documented sample values as real credentials. The
+    // example file is a template only and must not make SMTP look configured.
+    $placeholderValues = [
+        'your-gmail-address@example.com',
+        'your-google-app-password',
+    ];
+    $hasPlaceholder = in_array(strtolower($username), $placeholderValues, true)
+        || in_array(strtolower($password), $placeholderValues, true)
+        || in_array(strtolower($fromAddress), $placeholderValues, true);
+
     // This receipt feature intentionally supports only the requested Gmail
     // STARTTLS setup. The authenticated Gmail account is also the sender,
     // so browser input can never influence the From address.
-    $configured = strtolower($host) === 'smtp.gmail.com'
+    $configured = !$hasPlaceholder
+        && strtolower($host) === 'smtp.gmail.com'
         && $port === 587
         && $encryption === 'tls'
         && filter_var($username, FILTER_VALIDATE_EMAIL)

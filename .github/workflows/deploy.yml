@@ -34,12 +34,25 @@ jobs:
       - name: Create production environment
         env:
           PRODUCTION_ENV_FILE: ${{ secrets.PRODUCTION_ENV_FILE }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_FROM_ADDRESS: ${{ secrets.MAIL_FROM_ADDRESS }}
         run: |
           if [ -z "$PRODUCTION_ENV_FILE" ]; then
             echo "PRODUCTION_ENV_FILE secret is missing."
             exit 1
           fi
+          if [ -z "$MAIL_USERNAME" ] || [ -z "$MAIL_PASSWORD" ] || [ -z "$MAIL_FROM_ADDRESS" ]; then
+            echo "MAIL_USERNAME, MAIL_PASSWORD, and MAIL_FROM_ADDRESS secrets are required."
+            exit 1
+          fi
           printf '%s' "$PRODUCTION_ENV_FILE" > .env
+          sed -i '/^MAIL_/d' .env
+          printf '\nMAIL_HOST=smtp.gmail.com\nMAIL_PORT=587\nMAIL_ENCRYPTION=tls\n' >> .env
+          printf 'MAIL_USERNAME=%s\n' "$MAIL_USERNAME" >> .env
+          printf 'MAIL_PASSWORD=%s\n' "$MAIL_PASSWORD" >> .env
+          printf 'MAIL_FROM_ADDRESS=%s\n' "$MAIL_FROM_ADDRESS" >> .env
+          printf 'MAIL_FROM_NAME=SFMS\n' >> .env
 
       - name: Deploy application
         env:
