@@ -40,7 +40,8 @@ jobs:
           port: ${{ secrets.FTP_PORT }}
           protocol: ftp
           local-dir: ./
-          server-dir: /Feedback/
+          server-dir: Feedback/
+          state-name: .feedback-deploy-state.json
           exclude: |
             **/.git*
             **/.git*/**
