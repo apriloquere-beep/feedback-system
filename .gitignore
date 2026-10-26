@@ -1,0 +1,18 @@
+.env
+.env.*
+!.env.example
+
+# Dependencies
+/vendor/
+
+# Runtime files
+/logs/
+*.log
+
+# Database snapshots may contain personal data and credentials
+/database/backups/
+
+# Local tooling
+/.claude/
+.DS_Store
+Thumbs.db

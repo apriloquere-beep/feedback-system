@@ -1,0 +1,77 @@
+/**
+ * Header styles for includes/submit_header.php — extracted.
+ * Used only by feedback_submitted.php.
+ */
+:root {
+    --green-800: #065f46;
+    --green-700: #047857;
+    --green-600: #059669;
+    --white: #ffffff;
+}
+
+.app-header {
+    background: linear-gradient(135deg, var(--green-800) 0%, var(--green-700) 100%);
+    color: white;
+    padding: 0 5%;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: white;
+    text-decoration: none;
+}
+
+.brand-text-group { display: flex; flex-direction: column; line-height: 1.2; }
+.brand-text-group b { font-size: 1.1rem; letter-spacing: -0.5px; }
+.brand-text-group small {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.8;
+}
+
+.nav-list {
+    display: flex;
+    list-style: none;
+    gap: 30px;
+    align-items: center;
+}
+
+.nav-link {
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.85;
+    transition: 0.3s ease;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+.nav-link:hover, .nav-link.active {
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .nav-list { display: none; }
+}
+    /* Ensure brand text is visible on all sizes */
+    .brand-text-group { display: flex !important; }
+    .brand-text-group b, .brand-text-group small { color: white !important; }

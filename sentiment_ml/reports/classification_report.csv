@@ -1,0 +1,4 @@
+label,precision,recall,f1-score,support
+Positive,1.0,1.0,1.0,45
+Negative,1.0,1.0,1.0,45
+Neutral,1.0,1.0,1.0,45

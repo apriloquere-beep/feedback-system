@@ -1,0 +1,129 @@
+/**
+ * Base Styles
+ * Global resets, typography, and utility classes
+ */
+
+@import url('variables.css');
+
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    transition: background-color var(--transition-base) var(--transition-timing);
+}
+
+/* Typography */
+h1, h2, h3, h4 {
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    margin-bottom: var(--spacing-md);
+}
+
+h1 {
+    font-size: var(--font-size-5xl);
+}
+
+h2 {
+    font-size: var(--font-size-4xl);
+}
+
+h3 {
+    font-size: var(--font-size-3xl);
+}
+
+h4 {
+    font-size: var(--font-size-2xl);
+}
+
+p {
+    margin-bottom: var(--spacing-md);
+    line-height: var(--line-height-relaxed);
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: color var(--transition-fast) var(--transition-timing);
+}
+
+a:hover {
+    color: var(--primary-700);
+    text-decoration: underline;
+}
+
+/* Forms */
+button {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    border: none;
+    transition: all var(--transition-fast) var(--transition-timing);
+}
+
+/* Lists */
+ul,
+ol {
+    margin-bottom: var(--spacing-md);
+    padding-left: var(--spacing-xl);
+}
+
+li {
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Utility Classes */
+.page-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+}
+
+.page-main {
+    min-height: calc(100vh - 300px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    h1 {
+        font-size: var(--font-size-3xl);
+    }
+
+    h2 {
+        font-size: var(--font-size-2xl);
+    }
+
+    h3 {
+        font-size: var(--font-size-xl);
+    }
+
+    .page-container {
+        padding: 0 var(--spacing-md);
+    }
+}
+
+/* Print */
+@media print {
+    body {
+        background-color: transparent;
+        color: #000;
+    }
+
+    a {
+        color: #000;
+    }
+}

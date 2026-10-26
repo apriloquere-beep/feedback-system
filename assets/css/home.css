@@ -1,0 +1,765 @@
+:root {
+  /* Core color tokens for the home dashboard layout. */
+  --primary: #10b981;
+  --primary-dark: #065f46;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --surface: #ffffff;
+  --bg: #f7fefb;
+  --border: #d1fae5;
+  --shadow: 0 12px 32px rgba(16, 185, 129, 0.14);
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 18%, rgba(209, 250, 229, 0.75) 0%, rgba(209, 250, 229, 0) 48%),
+    radial-gradient(circle at 85% 12%, rgba(167, 243, 208, 0.55) 0%, rgba(167, 243, 208, 0) 45%),
+    radial-gradient(circle at 82% 78%, rgba(236, 253, 245, 0.95) 0%, rgba(236, 253, 245, 0) 46%),
+    linear-gradient(145deg, #f7fefb 0%, #ffffff 48%, #effcf6 100%);
+  background-attachment: fixed;
+}
+
+/* One shared statistics surface with three equal columns at every width. */
+.stats-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(640px, 100%);
+  margin: 0 auto;
+  padding: 12px 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.home-main {
+  /* Let sections flow vertically; hero will handle full viewport height */
+  min-height: auto;
+  display: block;
+}
+
+.hero-section {
+  /* Full-screen hero that centers content and allows sections to flow below */
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  overflow: visible;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(167, 243, 208, 0.18) 55%, rgba(255, 255, 255, 0.92) 100%);
+}
+
+@media (min-width: 769px) {
+  /* Desktop: account for header height so hero fits without dropping too low */
+  .hero-section {
+    min-height: calc(100vh - 86px);
+    padding: 22px 20px;
+  }
+
+  .hero-container {
+    min-height: 100%;
+    justify-content: center;
+  }
+}
+
+.hero-background {
+  /* Decorative background remains absolute so blobs sit behind content */
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hero-background::before {
+  /* Atmospheric halo rings: soft, oversized, and fading outward */
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(900px, 150vmin, 2300px);
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle,
+      transparent 0 21.85%,
+      rgba(45, 106, 79, 0.14) 21.85% 22.05%,
+      transparent 22.05% 36.85%,
+      rgba(45, 106, 79, 0.1) 36.85% 37.05%,
+      transparent 37.05% 51.85%,
+      rgba(45, 106, 79, 0.08) 51.85% 52.05%,
+      transparent 52.05% 100%);
+  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.7) 44%, rgba(0, 0, 0, 0.28) 66%, transparent 84%);
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.98) 0%, rgba(0, 0, 0, 0.7) 44%, rgba(0, 0, 0, 0.28) 66%, transparent 84%);
+  filter: drop-shadow(0 0 24px rgba(16, 185, 129, 0.09));
+  opacity: 0.56;
+  z-index: 0;
+  will-change: transform, opacity;
+  animation: haloBreathe 11s ease-in-out infinite;
+}
+
+.hero-background::after {
+  /* Ambient bloom behind the rings for a softer, premium look */
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(1100px, 170vmin, 2500px);
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.045) 34%, rgba(16, 185, 129, 0.015) 52%, rgba(16, 185, 129, 0) 76%);
+  filter: blur(6px);
+  opacity: 0.62;
+  z-index: -1;
+  will-change: transform, opacity;
+  animation: haloBloom 14s ease-in-out infinite;
+}
+
+@keyframes haloBreathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+  50% { transform: translate(-50%, -50%) scale(1.035); opacity: 0.62; }
+}
+
+@keyframes haloBloom {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.56; }
+  50% { transform: translate(-50%, -50%) scale(1.045); opacity: 0.68; }
+}
+
+.gradient-blob {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.15;
+  filter: blur(1px);
+  animation: floatBlob 7s ease-in-out infinite;
+}
+
+.blob-1 {
+  width: 420px;
+  height: 420px;
+  background: #34d399;
+  top: -60px;
+  left: -120px;
+}
+
+.blob-2 {
+  width: 360px;
+  height: 360px;
+  background: #6ee7b7;
+  right: -110px;
+  bottom: -70px;
+  animation-delay: 1.6s;
+}
+
+@keyframes floatBlob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(24px, -24px) scale(1.05); }
+}
+
+.hero-container {
+  max-width: 980px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+}
+
+/* The wrapper becomes structural only where the mobile hero needs separate
+   content and scroll-cue rows; elsewhere it preserves the existing flex flow. */
+.hero-content {
+  display: contents;
+}
+
+.system-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #059669;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  max-width: 100%;
+}
+
+.hero-title {
+  /* Larger, responsive hero title */
+  font-size: clamp(2.4rem, 6.8vw, 4.2rem);
+  line-height: 1.04;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.hero-title .highlight {
+  color: var(--primary);
+}
+
+.hero-subtitle {
+  max-width: 760px;
+  margin: 0 auto 18px;
+  color: var(--muted);
+  font-size: 1.06rem;
+  line-height: 1.75;
+}
+
+.hero-actions {
+  width: 100%;
+  margin-bottom: 26px;
+}
+
+.start-feedback-form {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 0;
+}
+
+.btn-main {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 210px;
+  padding: 15px 40px;
+  border-radius: 12px;
+  border: 0;
+  text-decoration: none;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary) 0%, #059669 100%);
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.32);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-height: 46px;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.btn-main:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(16, 185, 129, 0.38);
+}
+
+/* Transparent columns preserve one shared card while keeping content aligned. */
+.stats-panel .stat-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 62px;
+  text-align: center;
+  padding: 4px 14px;
+}
+
+.stats-panel .stat-card + .stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.stat-number {
+  margin: 0;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.stat-label {
+  width: 100%;
+  min-width: 0;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: clamp(0.64rem, 1.25vw, 0.76rem);
+  line-height: 1.2;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.scroll-down {
+  margin-top: 14px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #439b74;
+  padding: 8px 12px;
+  border-radius: 10px;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.scroll-down:hover {
+  opacity: 0.75;
+  transform: translateY(1px);
+}
+
+.scroll-down:focus-visible {
+  outline: 2px solid rgba(45, 106, 79, 0.45);
+  outline-offset: 3px;
+}
+
+.chevron {
+  width: 14px;
+  height: 14px;
+  border-right: 2px solid #2d6a4f;
+  border-bottom: 2px solid #2d6a4f;
+  transform: rotate(45deg);
+  animation: scrollChevronBounce 2.1s infinite;
+}
+
+@keyframes scrollChevronBounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0) rotate(45deg);
+  }
+  40% {
+    transform: translateY(8px) rotate(45deg);
+  }
+  60% {
+    transform: translateY(4px) rotate(45deg);
+  }
+}
+
+.features-section {
+  /* Ensure this section flows below the hero with clear spacing */
+  border-top: 3px solid #059669;
+  padding: 64px 20px 80px;
+  background: var(--surface);
+  margin-top: 0;
+}
+
+.section-container {
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.section-title {
+  text-align: center;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  margin: 0;
+}
+
+.title-line {
+  width: 84px;
+  height: 5px;
+  border-radius: 999px;
+  margin: 16px auto 34px;
+  background: linear-gradient(90deg, var(--primary), #34d399);
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 22px;
+  max-width: 1140px;
+  margin-inline: auto;
+}
+
+.step-card {
+  position: relative;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #d9f99d;
+  border-radius: 18px;
+  padding: 26px 22px;
+  box-shadow: 0 10px 22px rgba(16, 185, 129, 0.1);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.step-number {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: rgba(16, 185, 129, 0.45);
+  transition: transform 220ms ease, color 220ms ease, text-shadow 220ms ease;
+}
+
+.step-card:hover,
+.step-card:focus-within {
+  transform: translateY(-8px);
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.24);
+}
+
+.step-card:hover .step-number,
+.step-card:focus-within .step-number {
+  transform: scale(1.2);
+  color: #059669;
+  text-shadow: 0 6px 16px rgba(16, 185, 129, 0.45);
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.4));
+}
+
+.step-card:hover .icon-wrap,
+.step-card:focus-within .icon-wrap {
+  transform: translateY(-2px) scale(1.03);
+}
+
+.icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+  transition: transform 220ms ease;
+}
+
+.step-card h4 {
+  margin: 0 0 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.05rem;
+}
+
+.step-card p {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-card,
+  .step-number,
+  .icon-wrap {
+    transition: none;
+  }
+
+  .step-card:hover,
+  .step-card:focus-within,
+  .step-card:hover .step-number,
+  .step-card:focus-within .step-number,
+  .step-card:hover .icon-wrap,
+  .step-card:focus-within .icon-wrap {
+    transform: none;
+  }
+}
+
+/* --- QR "Scan to Give Feedback" section — reuses .section-container /
+   .section-title / .title-line from the How It Works section above, and
+   the same card look as .step-card, so no new visual language is introduced. --- */
+@media (max-width: 768px) {
+  .home-page .app-header {
+    padding-inline: 14px;
+  }
+
+  .home-page .header-container {
+    height: 68px;
+  }
+
+  .home-page .brand-logo {
+    min-width: 0;
+    gap: 9px;
+  }
+
+  .home-page .brand-logo > i {
+    flex: 0 0 auto;
+    font-size: 1.55rem;
+  }
+
+  .home-page .brand-text-group {
+    min-width: 0;
+  }
+
+  .home-page .brand-text-group b {
+    font-size: clamp(0.72rem, 3.1vw, 0.95rem);
+    line-height: 1.15;
+  }
+
+  .home-page .brand-text-group small {
+    font-size: clamp(0.47rem, 2vw, 0.58rem);
+    letter-spacing: 0.055em;
+  }
+
+  .home-page .hamburger-btn.header-hamburger {
+    flex: 0 0 auto;
+    margin-right: 0;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .home-page .nav-list.active {
+    top: 68px;
+  }
+
+  .hero-section {
+    min-height: calc(100svh - 68px);
+    padding: 22px 14px 24px;
+  }
+
+  .hero-container {
+    width: 100%;
+    gap: 8px;
+    padding: 4px 0;
+  }
+
+  .system-badge {
+    margin-bottom: 10px;
+    padding: 7px 12px;
+    font-size: clamp(0.65rem, 2.6vw, 0.78rem);
+    line-height: 1.35;
+  }
+
+  .hero-title {
+    font-size: clamp(1.65rem, 7.2vw, 2.25rem);
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+
+  .hero-subtitle {
+    max-width: 36rem;
+    margin-bottom: 18px;
+    font-size: clamp(0.78rem, 3vw, 0.9rem);
+    line-height: 1.48;
+  }
+
+  .hero-actions {
+    width: 100%;
+    margin-bottom: 32px;
+  }
+
+  .btn-main {
+    width: min(240px, 100%);
+    min-height: 50px;
+    padding: 13px 30px;
+    font-size: clamp(0.9rem, 3.4vw, 1rem);
+  }
+
+  .scroll-down {
+    margin-top: 22px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .stats-panel {
+    width: 100%;
+    padding: 9px 6px;
+  }
+
+  .stats-panel .stat-card {
+    min-height: 58px;
+    padding: 3px 8px;
+  }
+
+  .features-section {
+    padding: clamp(48px, 7svh, 56px) 16px 56px;
+  }
+}
+
+/* On normal-height phones, reserve the hero's lower edge for the scroll cue.
+   Short phones keep the cue in normal document flow below. */
+@media (max-width: 768px) and (min-height: 701px) {
+  .hero-section {
+    align-items: stretch;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .hero-container {
+    align-self: stretch;
+    display: grid;
+    grid-template-rows: minmax(0, 2fr) auto minmax(0, 1fr) auto;
+    justify-items: center;
+    gap: 0;
+  }
+
+  .hero-content {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .scroll-down {
+    grid-row: 4;
+    position: static;
+    margin: 0;
+    transform: none;
+  }
+}
+
+/* Tablet/iPad layout: keep the content group centered while the final grid
+   row holds the scroll cue above a safe-area-aware lower edge. */
+@media (min-width: 768px) and (max-width: 1180px) {
+  .hero-section {
+    padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .hero-actions {
+    margin-bottom: 64px;
+  }
+
+  .btn-main {
+    width: min(300px, 100%);
+    min-height: 60px;
+    padding: 17px 42px;
+    gap: 12px;
+    font-size: 1.08rem;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1180px) {
+  .hero-section {
+    min-height: calc(100svh - 80px);
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1180px) and (min-height: 701px) {
+  .hero-section {
+    align-items: stretch;
+  }
+
+  .hero-container {
+    align-self: stretch;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    justify-items: center;
+    gap: 0;
+  }
+
+  .hero-content {
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .scroll-down {
+    grid-row: 4;
+    position: static;
+    margin: 18px 0 0;
+    transform: none;
+  }
+}
+
+/* Keep the same three-column composition on phones, with tighter proportions. */
+@media (max-width: 600px) {
+  .stats-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 430px;
+  }
+
+  .stats-panel .stat-card {
+    padding-inline: 5px;
+  }
+
+  .stat-label {
+    min-height: 2.4em;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    font-size: clamp(0.54rem, 2.25vw, 0.7rem);
+  }
+}
+
+@media (max-width: 360px) {
+  .home-page .app-header {
+    padding-inline: 8px;
+  }
+
+  .home-page .brand-logo {
+    gap: 7px;
+  }
+
+  .home-page .brand-text-group b {
+    font-size: 0.68rem;
+  }
+
+  .home-page .brand-text-group small {
+    font-size: 0.44rem;
+  }
+
+  .hero-section {
+    padding-inline: 10px;
+  }
+
+  .stats-panel .stat-card {
+    padding-inline: 4px;
+  }
+}
+
+/* Avoid forcing tall viewport spacing on landscape and short-height phones. */
+@media (max-width: 768px) and (max-height: 700px) {
+  .hero-section {
+    min-height: auto;
+    padding-block: 16px 18px;
+  }
+
+  .system-badge {
+    margin-bottom: 8px;
+  }
+
+  .hero-title {
+    margin-bottom: 2px;
+  }
+
+  .hero-subtitle {
+    margin-bottom: 14px;
+  }
+
+  .hero-actions {
+    margin-bottom: 26px;
+  }
+
+  .scroll-down {
+    position: static;
+    margin-top: 16px;
+    margin-bottom: 0;
+    transform: none;
+  }
+
+  .stats-panel .stat-card {
+    min-height: 54px;
+    padding-block: 3px;
+  }
+}

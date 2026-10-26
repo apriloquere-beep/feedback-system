@@ -1,0 +1,82 @@
+{
+  "created_at_utc": "2026-09-13T15:27:17.783747+00:00",
+  "model": "TF-IDF Vectorizer + Logistic Regression",
+  "selected_configuration": {
+    "C": 0.5,
+    "min_df": 2
+  },
+  "classes": [
+    "Positive",
+    "Negative",
+    "Neutral"
+  ],
+  "classifier_classes": [
+    "Negative",
+    "Neutral",
+    "Positive"
+  ],
+  "sample_counts": {
+    "train": 630,
+    "validation": 135,
+    "test": 135
+  },
+  "label_counts": {
+    "train": {
+      "Positive": 210,
+      "Negative": 210,
+      "Neutral": 210
+    },
+    "validation": {
+      "Positive": 45,
+      "Negative": 45,
+      "Neutral": 45
+    },
+    "test": {
+      "Positive": 45,
+      "Negative": 45,
+      "Neutral": 45
+    }
+  },
+  "metrics": {
+    "training": {
+      "accuracy": 1.0,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0,
+      "macro_f1": 1.0,
+      "weighted_precision": 1.0,
+      "weighted_recall": 1.0,
+      "weighted_f1": 1.0
+    },
+    "validation": {
+      "accuracy": 1.0,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0,
+      "macro_f1": 1.0,
+      "weighted_precision": 1.0,
+      "weighted_recall": 1.0,
+      "weighted_f1": 1.0
+    },
+    "test": {
+      "accuracy": 1.0,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0,
+      "macro_f1": 1.0,
+      "weighted_precision": 1.0,
+      "weighted_recall": 1.0,
+      "weighted_f1": 1.0
+    }
+  },
+  "vocabulary_size": 1884,
+  "dataset_sha256": {
+    "train.csv": "ba87587f0535183c3d8729aed62c77a6dd24acab81019c326f7dbc6bdd86b9c5",
+    "validation.csv": "e28e83d4a39501e36e7a07c183ca69e2a8ba4ffe82e4ff168ae026a977186b85",
+    "test.csv": "5962b147f143707cfa771bec6d872db10f0e209fb8ce3f21d1afd8a9c8ba6d3a"
+  },
+  "versions": {
+    "python": "3.10.0",
+    "scikit_learn": "1.7.2",
+    "pandas": "2.3.3",
+    "numpy": "2.2.6",
+    "joblib": "1.5.3"
+  }
+}

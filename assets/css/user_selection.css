@@ -1,0 +1,366 @@
+/**
+ * User Selection page — respondent-type chooser shown between the homepage
+ * "Submit Feedback" button and form/feedback.php.
+ * Visual language matches the rest of the public site (Poppins, emerald
+ * green + white, rounded cards, soft shadows); adapted from the supplied
+ * design reference and trimmed to only what this page actually uses.
+ */
+
+:root {
+    --primary: #10b981;
+    --primary-light: #dcfce7;
+    --primary-glow: rgba(16, 185, 129, 0.2);
+    --secondary: #065f46;
+    --dark: #1e293b;
+    --text: #475569;
+    --bg: #f8fafc;
+    --white: #ffffff;
+    --shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+a {
+    color: inherit;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.bg-blur {
+    position: fixed;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.4;
+    z-index: -1;
+    animation: float 15s infinite ease-in-out;
+}
+
+.blur1 {
+    background: var(--primary-light);
+    top: -10%;
+    left: -10%;
+}
+
+.blur2 {
+    background: var(--primary);
+    bottom: -10%;
+    right: -10%;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(30px, -30px); }
+}
+
+.hero {
+    min-height: calc(100vh - 80px);
+    padding: 64px 0 80px;
+    text-align: center;
+    background:
+        radial-gradient(circle at 50% -10%, var(--primary-glow), transparent 40%),
+        linear-gradient(180deg, rgba(86, 171, 47, 0.08) 0%, transparent 100%);
+    position: relative;
+}
+
+.hero-content-centered {
+    position: relative;
+    z-index: 1;
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+.selection-hero {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-text h1 {
+    font-size: clamp(2rem, 4.5vw, 3.2rem);
+    font-weight: 800;
+    color: var(--dark);
+    line-height: 1.15;
+}
+
+.system-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--white);
+    padding: 10px 22px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--secondary);
+    border: 2px solid var(--primary);
+    box-shadow: var(--shadow);
+    margin-bottom: 24px;
+}
+
+.description-center {
+    max-width: 700px;
+    margin: 18px auto 0;
+    font-size: 1.05rem;
+}
+
+.selection-grid {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.selection-card {
+    position: relative;
+    background: var(--white);
+    padding: 22px 20px;
+    border-radius: 14px;
+    border: 2px solid var(--primary-light);
+    box-shadow: var(--shadow);
+    text-align: left;
+    overflow: hidden;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    isolation: isolate;
+}
+
+.selection-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(150deg, rgba(16, 185, 129, 0.14), rgba(16, 185, 129, 0));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.selection-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--primary);
+    box-shadow: 0 24px 48px var(--primary-glow);
+}
+
+.selection-card:hover::before {
+    opacity: 1;
+}
+
+.selection-card.patient-card { border-top: 4px solid #10b981; }
+.selection-card.companion-card { border-top: 4px solid #059669; }
+.selection-card.business-card { border-top: 4px solid #0ea5e9; }
+.selection-card.other-card { border-top: 4px solid #64748b; }
+
+.selection-card h3 {
+    color: var(--dark);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.selection-card p {
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+    min-height: 3.2em;
+}
+
+.selection-card .icon-wrap {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    margin-bottom: 14px;
+    box-shadow: 0 6px 14px var(--primary-glow);
+}
+
+.business-card .icon-wrap {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    box-shadow: 0 10px 25px rgba(14, 165, 233, 0.25);
+}
+
+.other-card .icon-wrap {
+    background: linear-gradient(135deg, #64748b, #475569);
+    box-shadow: 0 10px 25px rgba(71, 85, 105, 0.25);
+}
+
+.btn-main {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 11px 18px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border: 0;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.selection-card form {
+    width: 100%;
+    margin: 0;
+}
+
+.btn-main:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 24px var(--primary-glow);
+}
+
+.business-card .btn-main {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+}
+
+.business-card .btn-main:hover {
+    box-shadow: 0 14px 24px rgba(14, 165, 233, 0.3);
+}
+
+.other-card .btn-main {
+    background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.other-card .btn-main:hover {
+    box-shadow: 0 14px 24px rgba(71, 85, 105, 0.3);
+}
+
+.back-link {
+    display: grid;
+    grid-template-columns: 1em auto 1em;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 40px auto 0;
+    text-decoration: none;
+    color: var(--text);
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+.back-link::after {
+    content: '';
+    width: 1em;
+    height: 1em;
+}
+
+.back-link:hover {
+    color: var(--primary);
+}
+
+@media (max-width: 768px) {
+    .hero {
+        padding: 40px 0 48px;
+    }
+
+    .selection-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 30px;
+    }
+
+    .system-badge {
+        margin-bottom: 20px;
+        font-size: 0.75rem;
+        padding: 8px 16px;
+    }
+
+    .description-center {
+        font-size: 0.95rem;
+    }
+
+    .selection-card {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        padding: 14px 12px;
+        text-align: center;
+    }
+
+    .selection-card .icon-wrap {
+        margin: 0 auto 9px;
+    }
+
+    .selection-card h3 {
+        font-size: 0.95rem;
+        line-height: 1.3;
+        margin-bottom: 4px;
+        overflow-wrap: anywhere;
+    }
+
+    .selection-card p {
+        flex: 1;
+        min-height: 0;
+        margin-bottom: 10px;
+        font-size: 0.78rem;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+
+    .selection-card .btn-main {
+        width: 100%;
+        height: 66px;
+        min-height: 66px;
+        max-height: 66px;
+        padding: 6px 8px;
+        font-size: 0.76rem;
+        line-height: 1.2;
+        text-align: center;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .back-link {
+        margin-top: 30px;
+    }
+}
+
+@media (max-width: 420px) {
+    .hero-text h1 {
+        font-size: clamp(1.6rem, 6vw, 2.1rem);
+    }
+
+    .selection-card {
+        padding: 12px 8px;
+    }
+
+    .selection-grid {
+        gap: 10px;
+    }
+
+    .selection-card h3 {
+        font-size: 0.88rem;
+    }
+
+    .selection-card p {
+        font-size: 0.74rem;
+    }
+
+    .selection-card .btn-main {
+        font-size: 0.7rem;
+    }
+}

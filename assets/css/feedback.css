@@ -1,0 +1,18 @@
+/**
+ * Feedback Form Styles
+ * Loaded by modules/feedback/confirmation.php.
+ *
+ * confirmation.php's own visible markup (.confirmation-container,
+ * .success-badge, .reference-box, .submission-details, etc.) is styled
+ * entirely by that page's own trailing inline <style> block, not by this
+ * file. This file's only current effect is the base/variables cascade it
+ * imports below (resets, typography, .page-container/.page-main from
+ * base.css, and the design tokens from variables.css) — every
+ * component-level selector this file previously defined for its own
+ * form-card/field-group/rating-group/anon-toggle/message-form-intro
+ * system was verified against confirmation.php's actual rendered markup
+ * and confirmed to match nothing, so it was removed.
+ */
+
+@import url('variables.css');
+@import url('base.css');
