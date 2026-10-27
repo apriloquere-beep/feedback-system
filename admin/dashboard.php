@@ -2940,7 +2940,7 @@ document.getElementById('userChip').addEventListener('click',()=>{
   Keep their cache versions together so a deployment cannot combine this
   page with a browser-cached bundle from before Staff Ratings was restored.
 -->
-<script src="../js/admin/formatters.js?v=20261021-three-sentiment-categories"></script>
+<script src="../js/admin/formatters.js?v=20261027-recent-feedback-columns"></script>
 <script src="../js/admin/feedbackService.js?v=20260922-status-csrf"></script>
 <script src="../js/admin/store.js?v=20260913-service-subtypes"></script>
 <script src="../js/admin/renderers.js?v=20261027-report-response-cards"></script>

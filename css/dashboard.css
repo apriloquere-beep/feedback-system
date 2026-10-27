@@ -1829,11 +1829,24 @@ table.dtbl {
 .recent-feedback-table td:nth-child(7) { width: 12%; }
 
 .recent-feedback-date,
-.recent-feedback-service,
-.recent-feedback-type {
+.recent-feedback-service {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.recent-feedback-type-cell {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.recent-feedback-type {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .recent-feedback-actions {

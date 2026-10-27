@@ -646,11 +646,13 @@
       </div>`;
 
     if (mode === 'recent') {
+      const respondentLabel = respondentTypeLabel(entry);
+      const serviceLabel = entry.service || '—';
       return `
         <tr>
           <td class="recent-feedback-date">${escapeHtml(formatDateTime(entry.timestamp))}</td>
-          <td><span class="recent-feedback-type">${escapeHtml(respondentTypeLabel(entry))}</span></td>
-          <td class="recent-feedback-service">${escapeHtml(entry.service || '—')}</td>
+          <td class="recent-feedback-type-cell"><span class="recent-feedback-type" title="${escapeHtml(respondentLabel)}">${escapeHtml(respondentLabel)}</span></td>
+          <td class="recent-feedback-service" title="${escapeHtml(serviceLabel)}">${escapeHtml(serviceLabel)}</td>
           <td>${sentimentBadge(entry.sentimentLabel)}</td>
           <td><span class="score ${scoreClass}">${entry.rating ? entry.rating.toFixed(1) : '—'}</span></td>
           <td>${statusBadge(entry.status)}</td>
