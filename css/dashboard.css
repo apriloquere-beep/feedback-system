@@ -1520,6 +1520,53 @@ body {
     min-height: 74px;
 }
 
+.report-response-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.report-response-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2, #f8faf9);
+}
+
+.report-response-label {
+    display: inline-flex;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(35, 155, 114, 0.12);
+    color: var(--green);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.report-response-text {
+    min-width: 0;
+    color: var(--ink-1);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.report-response-empty {
+    padding: 14px;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    color: var(--ink-3);
+    text-align: center;
+}
+
 .report-panel {
     background: var(--surface);
     border: 1px solid var(--border);

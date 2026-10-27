@@ -52,6 +52,13 @@ sfmsBeginFeedbackJourney();
 $assert(sfmsSelectedFeedbackRespondent() === '', 'Starting another journey must clear the prior respondent.');
 $assert($_SESSION['selected_language'] === 'bisaya', 'Starting another journey must not reset language.');
 
+$assert(!sfmsHasSubmittedFeedbackToday(), 'A new respondent must not start with a daily submission marker.');
+sfmsMarkFeedbackSubmittedToday();
+$assert(sfmsHasSubmittedFeedbackToday(), 'A successful submission must activate the daily limit.');
+$_SESSION['feedback_submitted_date'] = date('Y-m-d', strtotime('-1 day'));
+$_COOKIE['sfms_feedback_submitted_date'] = date('Y-m-d', strtotime('-1 day'));
+$assert(!sfmsHasSubmittedFeedbackToday(), 'The daily limit must automatically expire on the next calendar day.');
+
 sfmsSelectFeedbackRespondent('patient');
 $_SESSION['unrelated_state'] = 'preserve-me';
 $activeDestination = sfmsQrEntryDestination();

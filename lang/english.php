@@ -391,6 +391,7 @@ return [
     'fb2_submitErrCommentTooLong' => 'Comments and suggestions must be 300 characters or fewer.',
     'fb2_submitErrStaffTooLong' => 'Name of Staff to Thank or Commend must be 150 characters or fewer.',
     'fb2_submitErrSuggestionTooLong' => 'Suggestion must be 200 characters or fewer.',
+    'fb2_submitErrDailyLimit' => 'You have already submitted feedback today. You may submit again tomorrow.',
     'fb2_submitSuccess' => 'Your feedback has been submitted successfully.',
     'fb2_submitErrGeneric' => 'Unable to save feedback right now. Please try again.',
 

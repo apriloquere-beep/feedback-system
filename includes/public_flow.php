@@ -65,6 +65,40 @@ function sfmsCompleteFeedbackJourney(): void
     unset($_SESSION['feedback_journey_started'], $_SESSION['feedback_respondent_key']);
 }
 
+function sfmsFeedbackDailyDate(): string
+{
+    return date('Y-m-d');
+}
+
+function sfmsHasSubmittedFeedbackToday(): bool
+{
+    $today = sfmsFeedbackDailyDate();
+
+    return hash_equals($today, (string) ($_SESSION['feedback_submitted_date'] ?? ''))
+        || hash_equals($today, (string) ($_COOKIE['sfms_feedback_submitted_date'] ?? ''));
+}
+
+/**
+ * Remember a successful submission until the next Manila calendar day.
+ * The persistent cookie keeps the limit in place if the browser is closed,
+ * while the session value makes it immediately effective for this request.
+ */
+function sfmsMarkFeedbackSubmittedToday(): void
+{
+    $today = sfmsFeedbackDailyDate();
+    $_SESSION['feedback_submitted_date'] = $today;
+
+    $tomorrow = (new DateTimeImmutable('tomorrow'))->getTimestamp();
+    setcookie('sfms_feedback_submitted_date', $today, [
+        'expires' => $tomorrow,
+        'path' => '/Feedback/',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    $_COOKIE['sfms_feedback_submitted_date'] = $today;
+}
+
 /**
  * Handle the explicit entry encoded in the facility QR code.
  *

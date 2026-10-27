@@ -598,15 +598,15 @@ if (!isset($_SESSION['admin_id'])) {
       <div class="reports-summary-row">
         <div class="report-panel report-summary-panel">
           <div class="report-status report-status-good">Summary</div>
-          <div class="report-label">Automated keyword summary — Comment and Staff</div>
-          <div class="report-detail" id="experienceSummaryText">No eligible SQD rating or written response yet.</div>
-          <div class="report-meta" id="experienceSummaryMeta">SQD rating and sentiment analysis are reported separately from each written field.</div>
+          <div class="report-label">Comments and Suggestions Summary</div>
+          <div class="report-detail" id="experienceSummaryText">No comments or suggestions submitted yet.</div>
+          <div class="report-meta" id="experienceSummaryMeta">Each submitted response is listed separately.</div>
         </div>
         <div class="report-panel report-summary-panel">
           <div class="report-status report-status-good">Summary</div>
-          <div class="report-label">Automated keyword summary — Suggestion</div>
-          <div class="report-detail" id="suggestionsSummaryText">No written Suggestion yet.</div>
-          <div class="report-meta" id="suggestionsSummaryMeta">Actual written Suggestion responses; no trends are inferred.</div>
+          <div class="report-label">Staff to Thank or Commend</div>
+          <div class="report-detail" id="suggestionsSummaryText">No staff names submitted yet.</div>
+          <div class="report-meta" id="suggestionsSummaryMeta">Each submitted staff name is listed separately.</div>
         </div>
       </div>
     </div>
@@ -2943,7 +2943,7 @@ document.getElementById('userChip').addEventListener('click',()=>{
 <script src="../js/admin/formatters.js?v=20261021-three-sentiment-categories"></script>
 <script src="../js/admin/feedbackService.js?v=20260922-status-csrf"></script>
 <script src="../js/admin/store.js?v=20260913-service-subtypes"></script>
-<script src="../js/admin/renderers.js?v=20261025-negative-feedback-notifications"></script>
+<script src="../js/admin/renderers.js?v=20261027-report-response-cards"></script>
 <script src="../js/admin/bootstrap.js?v=20261021-a4-healthcare-report"></script>
 <script src="../js/admin/printReport.js?v=20261021-period-select"></script>
 <script>

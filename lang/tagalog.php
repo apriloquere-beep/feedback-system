@@ -368,6 +368,7 @@ return [
     'fb2_submitErrCommentTooLong' => 'Hindi maaaring lumampas sa 300 character ang mga komento at mungkahi.',
     'fb2_submitErrStaffTooLong' => 'Hindi maaaring lumampas sa 150 character ang Pangalan ng Kawani.',
     'fb2_submitErrSuggestionTooLong' => 'Hindi maaaring lumampas sa 200 character ang Mungkahi.',
+    'fb2_submitErrDailyLimit' => 'Nakapagsumite ka na ng feedback ngayong araw. Maaari kang magsumite muli bukas.',
     'fb2_submitSuccess' => 'Matagumpay na naisumite ang iyong feedback.',
     'fb2_submitErrGeneric' => 'Hindi maisave ang feedback sa ngayon. Pakisubukang muli.',
 

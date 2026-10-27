@@ -26,6 +26,14 @@ if (!sfmsFeedbackJourneyStarted() || sfmsSelectedFeedbackRespondent() === '') {
     ], 403);
 }
 
+if (sfmsHasSubmittedFeedbackToday()) {
+    jsonResponse([
+        'success' => false,
+        'message' => $apiLang['fb2_submitErrDailyLimit'],
+        'retryAt' => date('Y-m-d', strtotime('tomorrow')),
+    ], 429);
+}
+
 function normalize_text($value): string
 {
     $text = trim((string) $value);
@@ -795,6 +803,7 @@ try {
     // this exact newly-created record. The copy endpoint must never be an
     // arbitrary-reference mail relay.
     $_SESSION['feedback_copy_reference_id'] = $referenceId;
+    sfmsMarkFeedbackSubmittedToday();
     sfmsCompleteFeedbackJourney();
 
     jsonResponse([

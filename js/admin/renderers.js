@@ -129,6 +129,29 @@
     setText('insLowAreaMeta', summary.lowService ? `${summary.lowService.count} entries with ratings below threshold` : 'Only services with 3+ entries are evaluated.');
     setText('insTrend', summary.trendLabel || 'Stable');
     setText('insTrendMeta', 'Last 30 days vs previous 30 days');
+
+    // The dashboard card still uses its historical `topDeptList` id, but
+    // SFMS is now service-only. Keep this container synchronized from the
+    // normalized service statistics instead of leaving its initial empty
+    // state in place when the modular renderer takes over.
+    const services = Array.isArray(summary.serviceStats) ? summary.serviceStats.slice(0, 5) : [];
+    setHtml('topDeptList', services.length ? services.map((service, index) => {
+      const average = Number(service.averageRating || 0);
+      const count = Number(service.count || 0);
+      const scoreClass = average >= 4 ? 'hi' : average >= 3 ? 'mid' : average > 0 ? 'lo' : 'na';
+      return `
+        <div class="comment-item">
+          <div class="c-who" style="display:flex;align-items:center;justify-content:space-between">
+            <span style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:11px;color:var(--ink-3)">#${index + 1}</span>
+              ${window.AdminDashboardFormatters.escapeHtml(service.label || 'Unassigned')}
+            </span>
+            <span class="score ${scoreClass}" style="font-size:11px">${average.toFixed(1)}</span>
+          </div>
+          <div class="c-text">${count} feedback${count === 1 ? '' : 's'}</div>
+        </div>
+      `;
+    }).join('') : '<div class="empty-state" style="padding:16px"><i class="fas fa-hand-holding-medical"></i><p>No data yet.</p></div>');
   }
 
   function renderReportSidebar(summary, entries) {
@@ -161,73 +184,44 @@
 
     const formatters = window.AdminDashboardFormatters;
     const esc = formatters.escapeHtml;
-    const sqdStats = new Map(Object.keys(SQD_QUESTIONS).map((key) => [key, { total: 0, count: 0 }]));
-    let sqdEligibleEntries = 0;
-    entries.forEach((entry) => {
-      let entryHasRating = false;
-      Object.keys(SQD_QUESTIONS).forEach((key) => {
-        const rating = ratingValue(entry.ratings?.[key]);
-        if (rating === null) return;
-        const stat = sqdStats.get(key);
-        stat.total += rating;
-        stat.count += 1;
-        entryHasRating = true;
-      });
-      if (entryHasRating) sqdEligibleEntries += 1;
-    });
-    const ratedQuestions = Array.from(sqdStats.entries())
-      .filter(([, stat]) => stat.count >= 3)
-      .map(([key, stat]) => ({ key, label: SQD_QUESTIONS[key], average: stat.total / stat.count, count: stat.count }));
-    const commentEntries = entries.filter((entry) => formatters.isWrittenText(entry.feedback));
-    const analyzedEntries = entries.filter((entry) => (
-      formatters.isWrittenText(entry.feedback) || formatters.isWrittenText(entry.suggestions)
-    ));
-    const sentimentCounts = { Positive: 0, Neutral: 0, Negative: 0 };
-    analyzedEntries.forEach((entry) => {
-      const sentiment = formatters.normalizeSentiment(entry.sentimentLabel);
-      if (Object.prototype.hasOwnProperty.call(sentimentCounts, sentiment)) sentimentCounts[sentiment] += 1;
-    });
-
-    const digest = (label, values) => {
-      const items = values.slice(0, 3).map((value) => `<div>${esc(value)}</div>`).join('');
-      return `<div><strong>${esc(label)}</strong><p>${items || 'No written response recorded.'}</p></div>`;
-    };
-    const commentTexts = commentEntries.map((entry) => formatters.normalizeText(entry.feedback));
+    const commentTexts = entries.map((entry) => formatters.normalizeText(entry.feedback)).filter(formatters.isWrittenText);
     const staffNames = entries.map((entry) => formatters.normalizeText(entry.appreciation)).filter(formatters.isWrittenText);
     const suggestionItems = entries.map((entry) => formatters.normalizeText(entry.suggestions)).filter(formatters.isWrittenText);
-
-    let ratingInsight = 'Insufficient SQD rating data for an insight; at least 3 valid responses per question are required.';
-    if (ratedQuestions.length) {
-      const highest = ratedQuestions.slice().sort((left, right) => right.average - left.average || left.label.localeCompare(right.label))[0];
-      const lowest = ratedQuestions.slice().sort((left, right) => left.average - right.average || left.label.localeCompare(right.label))[0];
-      ratingInsight = `Highest-rated: ${highest.label} (${highest.average.toFixed(1)}/5; n=${highest.count}). Lowest-rated: ${lowest.label} (${lowest.average.toFixed(1)}/5; n=${lowest.count}).`;
-    }
-    const commentInsight = analyzedEntries.length
-      ? `${sentimentCounts.Positive} Positive, ${sentimentCounts.Neutral} Neutral, and ${sentimentCounts.Negative} Negative across ${analyzedEntries.length} entries with written Comment or Suggestion.`
-      : 'No written Comment or Suggestion was submitted.';
+    const writtenResponses = [
+      ...commentTexts.map((text) => ({ label: 'Comment', text })),
+      ...suggestionItems.map((text) => ({ label: 'Suggestion', text })),
+    ];
+    const responseList = writtenResponses.map((item) => `
+      <li class="report-response-item">
+        <span class="report-response-label">${item.label}</span>
+        <span class="report-response-text">${esc(item.text)}</span>
+      </li>
+    `).join('');
     setHtml(
       'experienceSummaryText',
-      `<div><strong>SQD rating overview (separate from comment sentiment)</strong><p>${esc(ratingInsight)}</p></div>
-       <div><strong>Sentiment for Comment and Suggestion</strong><p>${esc(commentInsight)}</p></div>
-       ${digest('Comment', commentTexts)}
-       ${digest('Name of Staff to Thank or Commend', staffNames)}`
+      writtenResponses.length
+        ? `<ul class="report-response-list">${responseList}</ul>`
+        : '<div class="report-response-empty">No comments or suggestions submitted in this period.</div>'
     );
     setText(
       'experienceSummaryMeta',
-      `SQD ratings: ${sqdEligibleEntries} eligible feedback entries. Comment: ${commentTexts.length} entries. Staff name: ${staffNames.length} entries. Suggestion: ${suggestionItems.length} entries.`
+      `${commentTexts.length} comment${commentTexts.length === 1 ? '' : 's'} and ${suggestionItems.length} suggestion${suggestionItems.length === 1 ? '' : 's'}.`
     );
 
     setHtml(
       'suggestionsSummaryText',
-      suggestionItems.length
-        ? suggestionItems.slice(0, 3).map((suggestion) => `<div><strong>Suggestion:</strong> ${esc(suggestion)}</div>`).join('')
-        : 'No written Suggestion was submitted.'
+      staffNames.length
+        ? `<ul class="report-response-list report-staff-list">${staffNames.map((name) => `
+            <li class="report-response-item">
+              <span class="report-response-label">Staff</span>
+              <span class="report-response-text">${esc(name)}</span>
+            </li>
+          `).join('')}</ul>`
+        : '<div class="report-response-empty">No staff names submitted in this period.</div>'
     );
     setText(
       'suggestionsSummaryMeta',
-      suggestionItems.length
-        ? `${suggestionItems.length} written Suggestion entr${suggestionItems.length === 1 ? 'y' : 'ies'}; showing up to 3 actual responses.`
-        : 'No written Suggestion in this period.'
+      `${staffNames.length} staff name entr${staffNames.length === 1 ? 'y' : 'ies'}.`
     );
   }
 

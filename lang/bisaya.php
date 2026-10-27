@@ -391,6 +391,7 @@ return [
     'fb2_submitErrCommentTooLong' => 'Ang mga komento ug sugyot kinahanglang dili molapas sa 300 ka karakter.',
     'fb2_submitErrStaffTooLong' => 'Ang Ngalan sa Kawani kinahanglang dili molapas sa 150 ka karakter.',
     'fb2_submitErrSuggestionTooLong' => 'Ang Sugyot kinahanglang dili molapas sa 200 ka karakter.',
+    'fb2_submitErrDailyLimit' => 'Nakapadala na ka og feedback karong adlawa. Makapadala ka pag-usab ugma.',
     'fb2_submitSuccess' => 'Malampuson nga naisumite ang imong feedback.',
     'fb2_submitErrGeneric' => 'Dili karon mailog ang feedback. Palihug sulayi pag-usab.',
 
