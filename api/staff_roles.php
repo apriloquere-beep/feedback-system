@@ -24,10 +24,8 @@ require_once __DIR__ . '/security/AdminSecurity.php';
  * pipeline is hardcoded to st0-st9, so a new key works exactly like the
  * originals with zero other changes.
  *
- * deleteRole only hard-deletes a row that has never received a rating
- * (see roleKeyHasHistory()); a role with historical feedback is
- * deactivated instead (same effect as updateRole with isActive=false),
- * which preserves every existing rating recorded under that st-key.
+ * Roles are archived by deactivating the existing row. Their stable stN
+ * keys remain available for historical feedback and are never deleted.
  */
 
 function sendStaffRoles(PDO $pdo): void
@@ -50,6 +48,31 @@ function sendStaffRoles(PDO $pdo): void
     ]);
 }
 
+function saveStaffRole(PDO $pdo, int $id, ?string $label, bool $isActive): void
+{
+    $stmt = $pdo->prepare(
+        'UPDATE staff
+         SET full_name = COALESCE(:label, full_name),
+             is_active = :is_active,
+             archived_at = CASE WHEN :is_active2 = 1 THEN NULL ELSE COALESCE(archived_at, NOW()) END
+         WHERE id = :id'
+    );
+    $stmt->execute([
+        ':label' => $label,
+        ':is_active' => $isActive ? 1 : 0,
+        ':is_active2' => $isActive ? 1 : 0,
+        ':id' => $id,
+    ]);
+
+    if ($stmt->rowCount() === 0) {
+        $existsStmt = $pdo->prepare('SELECT 1 FROM staff WHERE id = :id');
+        $existsStmt->execute([':id' => $id]);
+        if (!$existsStmt->fetchColumn()) {
+            jsonResponse(['success' => false, 'message' => 'Staff role not found'], 404);
+        }
+    }
+}
+
 // Finds the lowest-numbered unused stN key, so a newly created role slots
 // in after the highest existing one (st0..st9 -> st10, st10 -> st11, ...)
 // without ever colliding with a key already used in historical ratings.
@@ -63,25 +86,6 @@ function resolveNextRoleKey(PDO $pdo): string
         }
     }
     return 'st' . ($maxN + 1);
-}
-
-// True if any feedback (either pipeline's table) has ever recorded an
-// answer for this role's st-key — i.e. hard-deleting the row would orphan
-// real historical rating data. Matches the key as a quoted JSON object key
-// (`"stN":`) so e.g. "st1" never false-matches inside "st10".
-function roleKeyHasHistory(PDO $pdo, string $roleKey): bool
-{
-    $pattern = '%"' . $roleKey . '":%';
-
-    $stmt = $pdo->prepare('SELECT 1 FROM feedbacks WHERE ratings_json LIKE :pattern LIMIT 1');
-    $stmt->execute([':pattern' => $pattern]);
-    if ($stmt->fetchColumn()) {
-        return true;
-    }
-
-    $stmt = $pdo->prepare('SELECT 1 FROM feedback_entries WHERE ratings LIKE :pattern LIMIT 1');
-    $stmt->execute([':pattern' => $pattern]);
-    return (bool) $stmt->fetchColumn();
 }
 
 sfmsStartSecureSession();
@@ -136,31 +140,7 @@ try {
             jsonResponse(['success' => false, 'message' => 'Another staff role already uses that label'], 422);
         }
 
-        // Deactivating stamps archived_at (soft-delete marker, mirrors
-        // migration 001's original intent); reactivating clears it.
-        $stmt = $pdo->prepare(
-            'UPDATE staff
-             SET full_name = :label,
-                 is_active = :is_active,
-                 archived_at = CASE WHEN :is_active2 = 1 THEN NULL ELSE COALESCE(archived_at, NOW()) END
-             WHERE id = :id'
-        );
-        $stmt->execute([
-            ':label' => $label,
-            ':is_active' => $isActive ? 1 : 0,
-            ':is_active2' => $isActive ? 1 : 0,
-            ':id' => $id,
-        ]);
-
-        if ($stmt->rowCount() === 0) {
-            // Either the id doesn't exist, or the row already matched
-            // these exact values — confirm which before erroring.
-            $existsStmt = $pdo->prepare('SELECT 1 FROM staff WHERE id = :id');
-            $existsStmt->execute([':id' => $id]);
-            if (!$existsStmt->fetchColumn()) {
-                jsonResponse(['success' => false, 'message' => 'Staff role not found'], 404);
-            }
-        }
+        saveStaffRole($pdo, $id, $label, $isActive);
 
         sendStaffRoles($pdo);
     }
@@ -195,31 +175,24 @@ try {
         sendStaffRoles($pdo);
     }
 
-    if ($action === 'deleteRole') {
+    // Keep the legacy action non-destructive for any older dashboard client.
+    if (in_array($action, ['archiveRole', 'deleteRole'], true)) {
         $id = (int) ($payload['id'] ?? 0);
         if ($id <= 0) {
             jsonResponse(['success' => false, 'message' => 'Valid staff role id is required'], 422);
         }
 
-        $roleStmt = $pdo->prepare('SELECT role FROM staff WHERE id = :id');
-        $roleStmt->execute([':id' => $id]);
-        $roleKey = $roleStmt->fetchColumn();
-        if ($roleKey === false) {
-            jsonResponse(['success' => false, 'message' => 'Staff role not found'], 404);
+        saveStaffRole($pdo, $id, null, false);
+        sendStaffRoles($pdo);
+    }
+
+    if ($action === 'restoreRole') {
+        $id = (int) ($payload['id'] ?? 0);
+        if ($id <= 0) {
+            jsonResponse(['success' => false, 'message' => 'Valid staff role id is required'], 422);
         }
 
-        if (roleKeyHasHistory($pdo, (string) $roleKey)) {
-            // Referenced by real feedback — deactivate instead of losing
-            // the historical rating data a hard delete would orphan.
-            $stmt = $pdo->prepare(
-                'UPDATE staff SET is_active = 0, archived_at = COALESCE(archived_at, NOW()) WHERE id = :id'
-            );
-            $stmt->execute([':id' => $id]);
-            sendStaffRoles($pdo);
-        }
-
-        $stmt = $pdo->prepare('DELETE FROM staff WHERE id = :id');
-        $stmt->execute([':id' => $id]);
+        saveStaffRole($pdo, $id, null, true);
         sendStaffRoles($pdo);
     }
 

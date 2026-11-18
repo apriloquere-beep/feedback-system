@@ -353,6 +353,7 @@ return [
     'fb2_suggestionLabel' => 'Suggestion (optional)',
     'fb2_suggestionPlaceholder' => 'Share one suggestion to improve the service.',
     'fb2_consentText' => "I agree that my answers will be used to improve the facility's services. I understand that this is <strong>confidential</strong> and will not be shared without consent.",
+    'fb2_viewFullDataPrivacy' => 'View Full Data Privacy',
     'fb2_btnClear' => 'Clear All',
     'fb2_btnSubmit' => 'Submit Survey →',
     'fb2_btnSubmitting' => 'Submitting…',

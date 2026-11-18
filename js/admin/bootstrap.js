@@ -83,8 +83,22 @@
   }
 
   let currentStaffFilter = 'all';
+  let currentStaffRoleView = 'active';
   let currentStaffSearch = '';
   let currentServiceFilter = 'all';
+  let currentAuditRecords = null;
+  let auditInitialized = false;
+  let auditFilterRequestId = 0;
+  let globalSearchTimer = null;
+  let globalSearchController = null;
+  let globalSearchRequestId = 0;
+  const feedbackSearchTimers = new Map();
+  const feedbackSearchControllers = new Map();
+  const feedbackSearchRequestIds = new Map();
+  const moduleSearchTimers = new Map();
+  let recentCommentsTimer = null;
+  let recentCommentsController = null;
+  let recentCommentsRequestId = 0;
   let trendChartInst = null;
   let serviceChartInst = null;
   let distChartInst = null;
@@ -148,7 +162,8 @@
             <input class="form-input" type="date" data-filter="dateFrom" aria-label="From date">
             <input class="form-input" type="date" data-filter="dateTo" aria-label="To date">
           </div>
-        </div>`;
+        </div>
+        <span class="feedback-search-status" data-search-status role="status" aria-live="polite"></span>`;
       const update = (event) => {
         if (!event.target.matches('[data-filter]')) return;
         const customDate = bar.querySelector('[data-filter="datePreset"]').value === 'custom';
@@ -187,13 +202,106 @@
     if (filters.service) filters.serviceName = bar.querySelector('[data-filter="service"]')?.selectedOptions[0]?.textContent || '';
     if (config.summaryId) filters.respondent = page;
     else filters.statusGroup = page;
+    if (filters.search.trim()) {
+      searchFeedbackPage(page, config, filters);
+      return;
+    }
+    cancelFeedbackSearch(page);
     const entries = formatters.filterEntries(store.getEntries(), filters);
+    const status = bar.querySelector('[data-search-status]');
+    if (status) {
+      status.textContent = '';
+      status.classList.remove('is-loading');
+    }
     if (config.summaryId) {
       renderers.renderRespondentSummary(entries, config.summaryId);
       renderers.renderFeedbackTable(config.bodyId, entries, page, 'No feedbacks match your filters.');
     } else {
       renderers.renderFeedbackCards(config.bodyId, entries, '<div class="empty-state"><p>No feedbacks match your filters.</p></div>');
     }
+  }
+
+  function cancelFeedbackSearch(page) {
+    if (feedbackSearchTimers.has(page)) {
+      window.clearTimeout(feedbackSearchTimers.get(page));
+      feedbackSearchTimers.delete(page);
+    }
+    const controller = feedbackSearchControllers.get(page);
+    if (controller) {
+      controller.abort();
+      feedbackSearchControllers.delete(page);
+    }
+    feedbackSearchRequestIds.set(page, (feedbackSearchRequestIds.get(page) || 0) + 1);
+  }
+
+  function searchFeedbackPage(page, config, filters) {
+    const bar = document.querySelector(`[data-feedback-filters="${page}"]`);
+    const status = bar?.querySelector('[data-search-status]');
+    if (feedbackSearchTimers.has(page)) window.clearTimeout(feedbackSearchTimers.get(page));
+    const currentController = feedbackSearchControllers.get(page);
+    if (currentController) {
+      currentController.abort();
+      feedbackSearchControllers.delete(page);
+    }
+    const requestId = (feedbackSearchRequestIds.get(page) || 0) + 1;
+    feedbackSearchRequestIds.set(page, requestId);
+    if (status) {
+      status.textContent = 'Searching...';
+      status.classList.add('is-loading');
+    }
+    const loadingRow = '<tr><td colspan="6" style="text-align:center;padding:20px">Searching...</td></tr>';
+    if (config.summaryId) {
+      renderers.renderRespondentSummary([], config.summaryId);
+      const body = document.getElementById(config.bodyId);
+      if (body) body.innerHTML = loadingRow;
+    } else {
+      const body = document.getElementById(config.bodyId);
+      if (body) body.innerHTML = '<div class="empty-state"><p>Searching...</p></div>';
+    }
+
+    const timer = window.setTimeout(async () => {
+      feedbackSearchTimers.delete(page);
+      const controller = new AbortController();
+      feedbackSearchControllers.set(page, controller);
+      try {
+        const apiFilters = { search: filters.search };
+        if (config.summaryId) apiFilters.respondent = page;
+        const result = await service.loadDashboardData(apiFilters, { signal: controller.signal });
+        if (requestId !== feedbackSearchRequestIds.get(page)) return;
+        const localFilters = { ...filters, search: '' };
+        const entries = formatters.filterEntries(result.entries.map(formatters.normalizeFeedback), localFilters);
+        const emptyMessage = filters.search.trim() ? 'No results found.' : 'No feedbacks match your filters.';
+        if (config.summaryId) {
+          renderers.renderRespondentSummary(entries, config.summaryId);
+          renderers.renderFeedbackTable(config.bodyId, entries, page, emptyMessage);
+        } else {
+          renderers.renderFeedbackCards(
+            config.bodyId,
+            entries,
+            `<div class="empty-state"><p>${formatters.escapeHtml(emptyMessage)}</p></div>`
+          );
+        }
+        if (status) {
+          status.textContent = `${entries.length} matching record${entries.length === 1 ? '' : 's'}`;
+          status.classList.remove('is-loading');
+        }
+      } catch (error) {
+        if (controller.signal.aborted || requestId !== feedbackSearchRequestIds.get(page)) return;
+        if (status) {
+          status.textContent = 'Search failed. Please try again.';
+          status.classList.remove('is-loading');
+        }
+        if (config.summaryId) {
+          renderers.renderFeedbackTable(config.bodyId, [], page, 'Search failed. Please try again.');
+        } else {
+          renderers.renderFeedbackCards(config.bodyId, [], '<div class="empty-state"><p>Search failed. Please try again.</p></div>');
+        }
+        AdminUI.toast(error.message || 'Unable to search feedback.', 'error');
+      } finally {
+        if (requestId === feedbackSearchRequestIds.get(page)) feedbackSearchControllers.delete(page);
+      }
+    }, 250);
+    feedbackSearchTimers.set(page, timer);
   }
 
   initFeedbackFilterBars();
@@ -664,7 +772,7 @@
     const staffRoles = store.getModules().staffRoles;
     const stats = formatters.computeStaffRoleStats(store.getEntries(), staffRoles);
     renderers.renderStaffOverallSummary(stats.overall);
-    renderers.renderStaffRatingsTable('staffBody', stats.roles, currentStaffFilter, currentStaffSearch);
+    renderers.renderStaffRatingsTable('staffBody', stats.roles, currentStaffFilter, currentStaffSearch, currentStaffRoleView);
   }
 
   function renderRecentTable() {
@@ -684,14 +792,220 @@
   function renderModulesPage() {
     window.AdminDashboardServiceFilter = currentServiceFilter;
     renderers.renderModules(store.getSnapshot());
+    renderAudit();
+  }
+
+  function renderAuditPage() {
+    renderers.renderModules(store.getSnapshot());
+    if (!auditInitialized) {
+      auditInitialized = true;
+      const dateFilter = getEl('auditDateFilter');
+      dateFilter.value = 'today';
+      currentAuditRecords = [];
+      renderAudit();
+      loadAuditDateFilter(auditDateRange('today'));
+      return;
+    }
+    renderAudit();
   }
 
   function renderNotifs() {
     renderers.renderModules(store.getSnapshot());
+    renderAudit();
   }
 
   function renderAudit() {
-    renderers.renderModules(store.getSnapshot());
+    const auditRecords = currentAuditRecords === null
+      ? store.getModules().audit
+      : currentAuditRecords;
+    const emptyMessage = getFilterValue('auditDateFilter') === 'custom' && !getFilterValue('auditCustomDate')
+      ? 'Select a date to view audit entries.'
+      : 'No audit entries found.';
+    renderers.renderAuditTable(auditRecords, getFilterValue('auditSearch'), emptyMessage);
+  }
+
+  function debounceModuleSearch(key, callback, delay = 200) {
+    if (moduleSearchTimers.has(key)) window.clearTimeout(moduleSearchTimers.get(key));
+    moduleSearchTimers.set(key, window.setTimeout(() => {
+      moduleSearchTimers.delete(key);
+      callback();
+    }, delay));
+  }
+
+  function handleRecentCommentsSearch() {
+    const input = getEl('notifSearch');
+    const list = getEl('dashboardNotifList');
+    const status = getEl('notifSearchStatus');
+    if (!input || !list) return;
+    const query = input.value.trim();
+    if (recentCommentsTimer !== null) {
+      window.clearTimeout(recentCommentsTimer);
+      recentCommentsTimer = null;
+    }
+    if (recentCommentsController) {
+      recentCommentsController.abort();
+      recentCommentsController = null;
+    }
+    const requestId = ++recentCommentsRequestId;
+    if (!query) {
+      if (status) {
+        status.textContent = '';
+        status.classList.remove('is-loading');
+      }
+      list.removeAttribute('aria-busy');
+      renderers.renderRecentComments(store.getEntries());
+      return;
+    }
+
+    list.setAttribute('aria-busy', 'true');
+    if (status) {
+      status.textContent = 'Searching...';
+      status.classList.add('is-loading');
+    }
+    list.innerHTML = '<div class="empty-state"><p>Searching...</p></div>';
+    recentCommentsTimer = window.setTimeout(async () => {
+      recentCommentsTimer = null;
+      const controller = new AbortController();
+      recentCommentsController = controller;
+      try {
+        const result = await service.loadDashboardData({ search: query, searchScope: 'comments' }, { signal: controller.signal });
+        if (requestId !== recentCommentsRequestId) return;
+        const entries = result.entries.map(formatters.normalizeFeedback);
+        renderers.renderRecentComments(entries, 'No results found.');
+        const matchCount = entries.filter((entry) => [entry.feedback, entry.suggestions, entry.appreciation].some(formatters.isWrittenText)).length;
+        if (status) {
+          status.textContent = `${matchCount} matching record${matchCount === 1 ? '' : 's'}`;
+          status.classList.remove('is-loading');
+        }
+      } catch (error) {
+        if (controller.signal.aborted || requestId !== recentCommentsRequestId) return;
+        list.innerHTML = '<div class="empty-state"><p>Search failed. Please try again.</p></div>';
+        if (status) {
+          status.textContent = 'Search failed.';
+          status.classList.remove('is-loading');
+        }
+        AdminUI.toast(error.message || 'Unable to search comments.', 'error');
+      } finally {
+        if (requestId === recentCommentsRequestId) {
+          list.removeAttribute('aria-busy');
+          recentCommentsController = null;
+        }
+      }
+    }, 250);
+  }
+
+  function initializeDashboardSearches() {
+    getEl('serviceSearch')?.addEventListener('input', () => debounceModuleSearch('services', renderModulesPage));
+    getEl('auditSearch')?.addEventListener('input', () => debounceModuleSearch('audit', renderAudit));
+    getEl('notifSearch')?.addEventListener('input', handleRecentCommentsSearch);
+  }
+
+  function localDateValue(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function auditDateRange(filter, today = new Date()) {
+    const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (filter === 'today') {
+      const date = localDateValue(end);
+      return { date };
+    }
+    if (filter === 'this-week') {
+      const start = new Date(end);
+      const daysSinceMonday = (start.getDay() + 6) % 7;
+      start.setDate(start.getDate() - daysSinceMonday);
+      return { date_from: localDateValue(start), date_to: localDateValue(end) };
+    }
+    if (filter === 'last-month') {
+      const start = new Date(end.getFullYear(), end.getMonth() - 1, 1);
+      const lastDay = new Date(end.getFullYear(), end.getMonth(), 0);
+      return { date_from: localDateValue(start), date_to: localDateValue(lastDay) };
+    }
+    return {};
+  }
+
+  async function loadAuditDateFilter(filters) {
+    const requestId = ++auditFilterRequestId;
+    try {
+      const records = await service.loadAuditRecords(filters);
+      if (requestId !== auditFilterRequestId) return;
+      currentAuditRecords = records;
+      renderAudit();
+    } catch (error) {
+      if (requestId !== auditFilterRequestId) return;
+      AdminUI.toast(error.message || 'Unable to filter audit records.', 'error');
+    }
+  }
+
+  function openAuditDatePicker() {
+    const dateInput = getEl('auditCustomDate');
+    if (!dateInput) return;
+
+    try {
+      if (typeof dateInput.showPicker === 'function') dateInput.showPicker();
+      else dateInput.click();
+    } catch (error) {
+      if (!(error instanceof DOMException)) throw error;
+      AdminUI.toast(error.message || 'Unable to open the date picker.', 'error');
+    }
+  }
+
+  function handleAuditDateFilterChange() {
+    const filter = getFilterValue('auditDateFilter');
+
+    if (filter === 'custom') {
+      const date = getFilterValue('auditCustomDate');
+      if (date) {
+        getEl('auditDateFilter').value = 'custom-date';
+        loadAuditDateFilter({ date });
+      } else {
+        auditFilterRequestId += 1;
+        currentAuditRecords = [];
+        renderAudit();
+      }
+      openAuditDatePicker();
+      return;
+    }
+
+    if (filter === 'custom-date') {
+      const date = getFilterValue('auditCustomDate');
+      if (date) {
+        loadAuditDateFilter({ date });
+      } else {
+        getEl('auditDateFilter').value = 'custom';
+        openAuditDatePicker();
+      }
+      return;
+    }
+
+    loadAuditDateFilter(filter === 'all' ? {} : auditDateRange(filter));
+  }
+
+  function handleAuditCustomDateChange() {
+    const date = getFilterValue('auditCustomDate');
+    if (!date) {
+      auditFilterRequestId += 1;
+      getEl('auditDateFilter').value = 'custom';
+      currentAuditRecords = [];
+      renderAudit();
+      return;
+    }
+
+    const dateFilter = getEl('auditDateFilter');
+    let selectedDateOption = dateFilter.querySelector('option[data-selected-audit-date]');
+    if (!selectedDateOption) {
+      selectedDateOption = document.createElement('option');
+      selectedDateOption.dataset.selectedAuditDate = 'true';
+      dateFilter.appendChild(selectedDateOption);
+    }
+    selectedDateOption.value = 'custom-date';
+    selectedDateOption.textContent = `Custom: ${date}`;
+    dateFilter.value = 'custom-date';
+
+    loadAuditDateFilter({ date });
   }
 
   function renderVisiblePage() {
@@ -720,8 +1034,10 @@
         break;
       case 'services':
       case 'notifications':
-      case 'audit':
         renderModulesPage();
+        break;
+      case 'audit':
+        renderAuditPage();
         break;
       case 'settings':
         break;
@@ -1010,6 +1326,10 @@
     renderAudit();
   };
 
+  window.handleAuditDateFilterChange = handleAuditDateFilterChange;
+  window.handleAuditCustomDateChange = handleAuditCustomDateChange;
+  window.initializeAuditLog = renderAuditPage;
+
   window.renderTrendChart = function () {
     renderTrendChart();
   };
@@ -1037,6 +1357,11 @@
     renderStaffTable();
   };
 
+  window.setStaffRoleView = function (view) {
+    currentStaffRoleView = ['active', 'archived', 'all'].includes(view) ? view : 'active';
+    renderStaffTable();
+  };
+
   window.filterServices = function (level, btn) {
     currentServiceFilter = level;
     document.querySelectorAll('.service-filters .f-chip').forEach((chip) => chip.classList.remove('active'));
@@ -1046,20 +1371,209 @@
 
   window.searchStaffRatings = function (query) {
     currentStaffSearch = String(query || '');
-    renderStaffTable();
+    debounceModuleSearch('staff', renderStaffTable);
   };
 
-  window.handleSearch = function (query) {
-    const category = getActivePage().replace('respondent-', '');
-    if (FEEDBACK_PAGES[category]) {
-      const search = document.querySelector(`[data-feedback-filters="${category}"] [data-filter="search"]`);
-      if (search) search.value = query;
-      renderFeedbackPage(category);
-    } else if (query) {
-      const parent = document.querySelector('[data-page=all-feedbacks]');
-      if (parent && parent.getAttribute('aria-expanded') !== 'true') window.nav(parent);
+  function renderGlobalSearchMessage(message, loading = false) {
+    const input = getEl('globalSearch');
+    const results = getEl('globalSearchResults');
+    if (!input || !results) return;
+
+    const status = document.createElement('div');
+    status.className = `global-search-status${loading ? ' is-loading' : ''}`;
+    status.setAttribute('role', 'status');
+    if (loading) {
+      const spinner = document.createElement('span');
+      spinner.className = 'global-search-spinner';
+      spinner.setAttribute('aria-hidden', 'true');
+      status.appendChild(spinner);
     }
+    const text = document.createElement('span');
+    text.textContent = message;
+    status.appendChild(text);
+    results.replaceChildren(status);
+    results.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+  }
+
+  function dismissGlobalSearch() {
+    if (globalSearchTimer !== null) {
+      window.clearTimeout(globalSearchTimer);
+      globalSearchTimer = null;
+    }
+    if (globalSearchController) {
+      globalSearchController.abort();
+      globalSearchController = null;
+    }
+    globalSearchRequestId++;
+
+    const input = getEl('globalSearch');
+    const results = getEl('globalSearchResults');
+    if (input) {
+      input.setAttribute('aria-busy', 'false');
+      input.setAttribute('aria-expanded', 'false');
+    }
+    if (results) {
+      results.hidden = true;
+      results.replaceChildren();
+    }
+  }
+
+  function renderGlobalSearchResults(entries, totalMatches, query) {
+    const input = getEl('globalSearch');
+    const results = getEl('globalSearchResults');
+    if (!input || !results) return;
+
+    results.replaceChildren();
+    if (totalMatches === 0) {
+      renderGlobalSearchMessage('No results found');
+      return;
+    }
+
+    const count = document.createElement('div');
+    count.className = 'global-search-status';
+    count.setAttribute('role', 'status');
+    count.textContent = totalMatches > entries.length
+      ? `Showing ${entries.length} of ${totalMatches} results`
+      : `${totalMatches} result${totalMatches === 1 ? '' : 's'}`;
+    results.appendChild(count);
+
+    const list = document.createElement('div');
+    list.className = 'global-search-list';
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', 'Matching feedback');
+    entries.forEach((entry) => {
+      const referenceId = String(entry.referenceId || '');
+      if (!referenceId) return;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'global-search-result';
+      button.dataset.referenceId = referenceId;
+      button.setAttribute('role', 'option');
+      button.setAttribute('aria-selected', 'false');
+
+      const title = document.createElement('span');
+      title.className = 'global-search-result-title';
+      title.textContent = String(entry.subject || '').trim() || `Feedback ${referenceId}`;
+      button.appendChild(title);
+
+      const service = String(entry.serviceOther || entry.feedbackServiceOther || entry.service || '').trim();
+      const subservice = String(entry.serviceSubtypeOther || entry.feedbackServiceSubtypeOther || entry.serviceSubtype || '').trim();
+      const respondent = entry.isAnonymous
+        ? 'Anonymous'
+        : String(entry.fullName || entry.email || '').trim();
+      const details = document.createElement('span');
+      details.className = 'global-search-result-meta';
+      details.textContent = [
+        referenceId,
+        String(entry.facility || '').trim(),
+        service,
+        subservice,
+        respondent,
+      ].filter(Boolean).join(' · ');
+      button.appendChild(details);
+
+      const textFields = [entry.feedback, entry.suggestions, entry.appreciation]
+        .map(value => String(value || '').trim())
+        .filter(Boolean);
+      const normalizedQuery = query.toLowerCase();
+      const preview = textFields.find(value => value.toLowerCase().includes(normalizedQuery)) || textFields[0];
+      if (preview) {
+        const snippet = document.createElement('span');
+        snippet.className = 'global-search-result-preview';
+        snippet.textContent = preview.length > 180 ? `${preview.slice(0, 180)}...` : preview;
+        button.appendChild(snippet);
+      }
+
+      list.appendChild(button);
+    });
+    results.appendChild(list);
+    results.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+  }
+
+  function initializeGlobalSearch() {
+    const input = getEl('globalSearch');
+    const results = getEl('globalSearchResults');
+    const wrapper = input && input.closest('.global-search-wrap');
+    if (!input || !results || !wrapper) return;
+
+    input.addEventListener('input', () => window.handleSearch(input.value));
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !results.hidden) {
+        event.preventDefault();
+        event.stopPropagation();
+        dismissGlobalSearch();
+      } else if (event.key === 'Enter' && !results.hidden) {
+        const firstResult = results.querySelector('.global-search-result');
+        if (firstResult) {
+          event.preventDefault();
+          firstResult.click();
+        }
+      }
+    });
+    results.addEventListener('click', (event) => {
+      const result = event.target.closest && event.target.closest('.global-search-result[data-reference-id]');
+      if (!result) return;
+      const referenceId = result.dataset.referenceId;
+      dismissGlobalSearch();
+      input.value = '';
+      if (typeof window.viewFeedback === 'function') {
+        window.viewFeedback(referenceId);
+      } else {
+        AdminUI.toast('Unable to open feedback details.', 'error');
+      }
+    });
+    document.addEventListener('click', (event) => {
+      if (!wrapper.contains(event.target) && !results.hidden) dismissGlobalSearch();
+    });
+  }
+
+  window.handleSearch = function (query) {
+    const input = getEl('globalSearch');
+    if (!input) return;
+
+    const searchTerm = String(query || '').trim();
+    if (globalSearchTimer !== null) {
+      window.clearTimeout(globalSearchTimer);
+      globalSearchTimer = null;
+    }
+    if (globalSearchController) {
+      globalSearchController.abort();
+      globalSearchController = null;
+    }
+    const requestId = ++globalSearchRequestId;
+    if (!searchTerm) {
+      dismissGlobalSearch();
+      return;
+    }
+
+    input.setAttribute('aria-busy', 'true');
+    renderGlobalSearchMessage('Searching...', true);
+    globalSearchTimer = window.setTimeout(async () => {
+      globalSearchTimer = null;
+      const controller = new AbortController();
+      globalSearchController = controller;
+      try {
+        const result = await service.searchFeedback(searchTerm, { signal: controller.signal });
+        if (requestId !== globalSearchRequestId) return;
+        renderGlobalSearchResults(result.entries, result.totalMatches, searchTerm);
+      } catch (error) {
+        if (controller.signal.aborted || requestId !== globalSearchRequestId) return;
+        renderGlobalSearchMessage('Search failed. Please try again.');
+        AdminUI.toast(error.message || 'Unable to search feedback.', 'error');
+      } finally {
+        if (requestId === globalSearchRequestId) {
+          input.setAttribute('aria-busy', 'false');
+          globalSearchController = null;
+        }
+      }
+    }, 250);
   };
+
+  initializeGlobalSearch();
+  initializeDashboardSearches();
 
   window.updateStatus = async function (refId, status) {
     if (!refId) return AdminUI.toast('No reference ID.', 'error');

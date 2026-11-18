@@ -12,6 +12,7 @@ final class FeedbackAnalytics
     public static function filter(array $entries, array $filters): array
     {
         $search = trim((string) ($filters['search'] ?? ''));
+        $searchScope = strtolower(trim((string) ($filters['searchScope'] ?? '')));
         $status = trim((string) ($filters['status'] ?? ''));
         $sentimentInput = strtolower(trim((string) ($filters['sentiment'] ?? '')));
         if ($sentimentInput !== '' && !isset(self::SENTIMENTS[$sentimentInput])) {
@@ -27,13 +28,29 @@ final class FeedbackAnalytics
         $dateFrom = self::validDate((string) ($filters['dateFrom'] ?? ''));
         $dateTo = self::validDate((string) ($filters['dateTo'] ?? ''));
 
-        return array_values(array_filter($entries, static function (array $entry) use ($search, $status, $sentiment, $priority, $feedbackType, $service, $respondent, $minRating, $maxRating, $dateFrom, $dateTo): bool {
+        return array_values(array_filter($entries, static function (array $entry) use ($search, $searchScope, $status, $sentiment, $priority, $feedbackType, $service, $respondent, $minRating, $maxRating, $dateFrom, $dateTo): bool {
             if ($search !== '') {
-                $haystack = implode(' ', array_map('strval', [
-                    $entry['referenceId'] ?? '', $entry['name'] ?? $entry['fullName'] ?? '',
-                    $entry['service'] ?? '', $entry['subject'] ?? '', $entry['feedback'] ?? '',
-                    $entry['suggestions'] ?? '', $entry['appreciation'] ?? '', $entry['sentimentLabel'] ?? '',
-                ]));
+                if ($searchScope === 'comments') {
+                    $commentFields = [
+                        $entry['feedback'] ?? '', $entry['suggestions'] ?? '', $entry['appreciation'] ?? '',
+                    ];
+                    if (!array_filter($commentFields, static fn ($value): bool => trim((string) $value) !== '')) {
+                        return false;
+                    }
+                    $searchableFields = $commentFields;
+                } else {
+                    $searchableFields = [
+                        $entry['referenceId'] ?? '', $entry['facility'] ?? '',
+                        $entry['service'] ?? '', $entry['serviceSubtype'] ?? '',
+                        $entry['serviceOther'] ?? '', $entry['serviceSubtypeOther'] ?? '',
+                        $entry['feedbackServiceOther'] ?? '', $entry['feedbackServiceSubtypeOther'] ?? '',
+                        $entry['name'] ?? $entry['fullName'] ?? '', $entry['email'] ?? '',
+                        $entry['subject'] ?? '', $entry['feedback'] ?? '',
+                        $entry['suggestions'] ?? '', $entry['appreciation'] ?? '',
+                        $entry['sentimentLabel'] ?? '',
+                    ];
+                }
+                $haystack = implode(' ', array_map('strval', $searchableFields));
                 if (stripos($haystack, $search) === false) return false;
             }
             if ($status !== '' && normalizeStatus((string) ($entry['status'] ?? 'pending')) !== normalizeStatus($status)) return false;

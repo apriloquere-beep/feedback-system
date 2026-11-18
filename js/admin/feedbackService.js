@@ -28,7 +28,7 @@
     return payload;
   }
 
-  async function loadDashboardData(filters = {}) {
+  async function loadDashboardData(filters = {}, options = {}) {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '') return;
@@ -36,16 +36,45 @@
     });
 
     const query = params.toString() ? `?${params.toString()}` : '';
-    const payload = await requestJson(`${API_ROOT}/feedback_json.php${query}`);
+    const payload = await requestJson(`${API_ROOT}/feedback_json.php${query}`, options);
+    if (!Array.isArray(payload.data)) {
+      throw new Error('Invalid feedback response');
+    }
     return {
-      entries: Array.isArray(payload.data) ? payload.data : [],
+      entries: payload.data,
       summary: payload.summary || {},
+    };
+  }
+
+  async function searchFeedback(query, options = {}) {
+    const params = new URLSearchParams({ search: String(query), globalSearch: '1' });
+    const payload = await requestJson(`${API_ROOT}/feedback_json.php?${params.toString()}`, options);
+    if (!Array.isArray(payload.data) || !Number.isInteger(payload.totalMatches) || payload.totalMatches < 0) {
+      throw new Error('Invalid feedback search response');
+    }
+    return {
+      entries: payload.data,
+      totalMatches: payload.totalMatches,
     };
   }
 
   async function loadAdminModules(section = 'all') {
     const payload = await requestJson(`${API_ROOT}/admin_modules.php?section=${encodeURIComponent(section)}`);
     return payload.data || {};
+  }
+
+  async function loadAuditRecords(filters = {}) {
+    const params = new URLSearchParams({ section: 'audit' });
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.set(key, String(value));
+      }
+    });
+    const payload = await requestJson(`${API_ROOT}/admin_modules.php?${params.toString()}`);
+    if (!Array.isArray(payload.data)) {
+      throw new Error('Invalid audit response');
+    }
+    return payload.data;
   }
 
   async function updateFeedback(referenceId, status, updates = {}) {
@@ -78,7 +107,9 @@
 
   window.AdminDashboardService = {
     loadDashboardData,
+    searchFeedback,
     loadAdminModules,
+    loadAuditRecords,
     updateFeedback,
     deleteFeedback,
     mutateAdminModule,

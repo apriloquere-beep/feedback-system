@@ -100,7 +100,7 @@
   // (counts/average) is untouched and still keyed purely by whatever
   // answer data is already in `entries`.
   function computeStaffRoleStats(entries = [], staffRoles = null) {
-    const source = Array.isArray(staffRoles) && staffRoles.length ? staffRoles : DEFAULT_STAFF_ROLES;
+    const source = Array.isArray(staffRoles) ? staffRoles : DEFAULT_STAFF_ROLES;
     const roles = source.map((role) => ({
       id: role.id,
       key: role.key,

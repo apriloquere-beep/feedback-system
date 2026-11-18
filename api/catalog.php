@@ -83,22 +83,6 @@ function catalogReferenceExists(PDO $pdo, string $sql, array $params): bool
     return (bool) $stmt->fetchColumn();
 }
 
-function serviceDeleteBlocker(PDO $pdo, int $serviceId, string $serviceName): ?string
-{
-    if (catalogReferenceExists($pdo, 'SELECT 1 FROM service_subtypes WHERE service_id = :id LIMIT 1', [':id' => $serviceId])) {
-        return 'it still has sub-services';
-    }
-    if (catalogReferenceExists($pdo, 'SELECT 1 FROM feedbacks WHERE service_id = :id LIMIT 1', [':id' => $serviceId])
-        || catalogReferenceExists($pdo, 'SELECT 1 FROM feedback_entries WHERE service_id = :id LIMIT 1', [':id' => $serviceId])) {
-        return 'it is referenced by feedback history';
-    }
-    if (catalogReferenceExists($pdo, 'SELECT 1 FROM feedbacks WHERE service_id IS NULL AND service = :name LIMIT 1', [':name' => $serviceName])
-        || catalogReferenceExists($pdo, 'SELECT 1 FROM feedback_entries WHERE service_id IS NULL AND service = :name LIMIT 1', [':name' => $serviceName])) {
-        return 'legacy feedback records use its name';
-    }
-    return null;
-}
-
 function subserviceDeleteBlocker(PDO $pdo, int $subserviceId): ?string
 {
     if (catalogReferenceExists($pdo, 'SELECT 1 FROM feedbacks WHERE service_subtype_id = :id LIMIT 1', [':id' => $subserviceId])
@@ -187,13 +171,12 @@ try {
         sendCatalog($pdo);
     }
 
-    if ($action === 'deleteService') {
+    if ($action === 'archiveService' || $action === 'deleteService') {
         $id = (int) ($payload['id'] ?? 0);
         if ($id <= 0) {
             jsonResponse(['success' => false, 'message' => 'Valid service id is required'], 422);
         }
 
-        // Archive/deactivate service instead of permanent deletion
         $stmt = $pdo->prepare('UPDATE services SET status = "inactive" WHERE id = :id');
         $stmt->execute([':id' => $id]);
         sendCatalog($pdo);
@@ -210,28 +193,6 @@ try {
         if ($stmt->rowCount() === 0) {
             jsonResponse(['success' => false, 'message' => 'Inactive service not found'], 404);
         }
-        sendCatalog($pdo);
-    }
-
-    if ($action === 'deleteServicePermanently') {
-        $id = (int) ($payload['id'] ?? 0);
-        if ($id <= 0) {
-            jsonResponse(['success' => false, 'message' => 'Valid service id is required'], 422);
-        }
-
-        $serviceStmt = $pdo->prepare('SELECT id, name FROM services WHERE id = :id LIMIT 1');
-        $serviceStmt->execute([':id' => $id]);
-        $service = $serviceStmt->fetch(PDO::FETCH_ASSOC);
-        if ($service === false) {
-            jsonResponse(['success' => false, 'message' => 'Service not found'], 404);
-        }
-        $blocker = serviceDeleteBlocker($pdo, (int) $service['id'], (string) $service['name']);
-        if ($blocker !== null) {
-            jsonResponse(['success' => false, 'message' => 'Cannot permanently delete this service because ' . $blocker . '. Deactivate it instead.'], 409);
-        }
-
-        $stmt = $pdo->prepare('DELETE FROM services WHERE id = :id');
-        $stmt->execute([':id' => $id]);
         sendCatalog($pdo);
     }
 

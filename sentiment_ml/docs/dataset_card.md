@@ -34,6 +34,10 @@ All initial examples are synthetic. They may not reproduce the full vocabulary, 
 
 This initial dataset is a starting annotation resource, not sufficient evidence of production accuracy. Future versions should incorporate consented, anonymized, independently labeled SFMS feedback and an untouched real-world test set.
 
+## Version 3.0 release
+
+A separate 5,000-row synthetic multilingual release is documented in [dataset_card_v3_5000.md](./dataset_card_v3_5000.md). It does not replace or modify this original 900-row dataset.
+
 ## Privacy
 
 The initial release contains no intentional names, contact information, medical record numbers, reference IDs from real submissions, or other patient identifiers. Future real feedback must be de-identified before annotation or training and handled under the project’s approved privacy and research procedures.

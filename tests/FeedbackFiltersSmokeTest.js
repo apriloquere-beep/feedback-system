@@ -74,4 +74,62 @@ for (const [label, category] of [
   assert.equal(context.window.AdminDashboardFormatters.respondentTypeLabel(entry), label);
 }
 
+const elements = new Map();
+context.document = {
+  getElementById(id) {
+    if (!elements.has(id)) elements.set(id, { innerHTML: '', textContent: '', value: '' });
+    return elements.get(id);
+  },
+};
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'js/admin/renderers.js'), 'utf8'), context);
+const renderers = context.window.AdminDashboardRenderers;
+context.window.AdminDashboardServiceFilter = 'all';
+context.document.getElementById('serviceSearch').value = 'BLOOD';
+renderers.renderModules({
+  entries: [],
+  modules: {
+    services: [
+      { id: 1, name: 'Primary Care', status: 'active', averageRating: 4, subservices: [{ name: 'Blood Panel' }], subserviceNames: ['Blood Panel', 'Archived MRI'] },
+      { id: 2, name: 'Dental', status: 'active', averageRating: 4, subservices: [] },
+    ],
+    audit: [],
+  },
+});
+assert.match(elements.get('servicesTableBody').innerHTML, /Primary Care/);
+assert.doesNotMatch(elements.get('servicesTableBody').innerHTML, />Dental</);
+assert.equal(elements.get('serviceSearchStatus').textContent, '1 matching service');
+context.document.getElementById('serviceSearch').value = 'ARCHIVED MRI';
+renderers.renderModules({
+  entries: [],
+  modules: {
+    services: [
+      { id: 1, name: 'Primary Care', status: 'active', averageRating: 4, subservices: [{ name: 'Blood Panel' }], subserviceNames: ['Blood Panel', 'Archived MRI'] },
+      { id: 2, name: 'Dental', status: 'active', averageRating: 4, subservices: [], subserviceNames: [] },
+    ],
+    audit: [],
+  },
+});
+assert.match(elements.get('servicesTableBody').innerHTML, /Primary Care/);
+assert.doesNotMatch(elements.get('servicesTableBody').innerHTML, />Dental</);
+context.document.getElementById('serviceSearch').value = 'no service';
+renderers.renderModules({ entries: [], modules: { services: [], audit: [] } });
+assert.match(elements.get('servicesTableBody').innerHTML, /No results found/);
+
+renderers.renderStaffRatingsTable('staffBody', [
+  { id: 1, key: 'st12', label: 'Front Desk', isActive: true, average: 4, counts: { 5: 1, 4: 0, 3: 0, 2: 0, 1: 0, NA: 0 }, responses: 1 },
+  { id: 2, key: 'st13', label: 'Nursing', isActive: true, average: 4, counts: { 5: 1, 4: 0, 3: 0, 2: 0, 1: 0, NA: 0 }, responses: 1 },
+], 'all', 'ST12');
+assert.match(elements.get('staffBody').innerHTML, /Front Desk/);
+assert.doesNotMatch(elements.get('staffBody').innerHTML, /Nursing/);
+assert.equal(elements.get('staffSearchStatus').textContent, '1 matching staff role');
+
+renderers.renderAuditTable([
+  { timestamp: '2026-11-18T10:00:00', adminName: 'April Admin', action: 'Admin Login', referenceId: '', detail: 'Successful login' },
+], 'april');
+assert.match(elements.get('auditBody').innerHTML, /April Admin/);
+renderers.renderAuditTable([
+  { timestamp: '2026-11-18T10:00:00', adminName: 'April Admin', action: 'Admin Login', referenceId: '', detail: 'Successful login' },
+], 'no-match');
+assert.match(elements.get('auditBody').innerHTML, /No results found/);
+
 console.log('Feedback filter smoke tests passed.');

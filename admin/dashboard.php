@@ -1,10 +1,17 @@
 <?php
 require_once __DIR__ . '/../api/config.php';
+require_once __DIR__ . '/../api/db.php';
 require_once __DIR__ . '/../api/security/AdminSecurity.php';
 sfmsStartSecureSession();
 if (!isset($_SESSION['admin_id'])) {
     header('Location: /Feedback/admin/login.php');
     exit;
+}
+$adminProfileName = trim((string) ($_SESSION['admin_name'] ?? ''));
+
+$adminInitials = '';
+foreach (array_slice(preg_split('/\s+/', $adminProfileName, -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, 2) as $namePart) {
+    $adminInitials .= strtoupper(substr($namePart, 0, 1));
 }
 ?>
 <!DOCTYPE html>
@@ -73,7 +80,7 @@ if (!isset($_SESSION['admin_id'])) {
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal()">Cancel</button>
       <button class="btn-primary" id="modalSave" onclick="handleModalSave()"><i class="fas fa-save"></i> Save</button>
-      <button type="button" class="btn-primary" id="modalDelete" style="background:#dc2626;display:none" onclick="confirmDeleteStaffRole()"><i class="fas fa-trash"></i> Delete</button>
+      <button type="button" class="btn-primary" id="modalDelete" style="background:#dc2626;display:none" onclick="confirmArchiveStaffRole()"><i class="fas fa-box-archive"></i> Archive</button>
     </div>
   </div>
 </div>
@@ -106,6 +113,10 @@ if (!isset($_SESSION['admin_id'])) {
     </div>
   </div>
 </div>
+
+<form method="post" action="logout.php" id="logoutForm" hidden onsubmit="openLogoutConfirmation(event)">
+  <input type="hidden" name="csrf" value="<?= htmlspecialchars(sfmsCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+</form>
 
 <div id="shell">
 
@@ -183,31 +194,50 @@ if (!isset($_SESSION['admin_id'])) {
     </a>
   </div>
 
-  <div class="sb-spacer"></div>
-  <div class="sb-section sb-footer">
-    <form method="post" action="logout.php" id="logoutForm" style="margin:0" onsubmit="openLogoutConfirmation(event)">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars(sfmsCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
-    <button type="submit" class="sb-link logout" style="width:100%;border:0;background:transparent;text-align:left">
-      <div class="si"><i class="fas fa-sign-out-alt"></i></div><span class="sl">Logout</span>
-    </button></form>
-  </div>
 </nav>
 
 <!-- ═══ CONTENT ═══ -->
 <div id="content">
   <nav class="topnav">
     <div class="topnav-title" id="pageTitle">Dashboard</div>
-    <div class="search-wrap"><i class="fas fa-search"></i><input type="text" placeholder="Search feedback..." id="globalSearch" oninput="handleSearch(this.value)"></div>
+    <div class="search-wrap global-search-wrap">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <input type="search" placeholder="Search feedback..." id="globalSearch"
+        autocomplete="off" aria-label="Search feedback" aria-controls="globalSearchResults" aria-expanded="false" aria-busy="false">
+      <div id="globalSearchResults" class="global-search-results" hidden></div>
+    </div>
     <div class="icon-btn" onclick="openNotificationPage()" role="button" tabindex="0" onkeydown="if(event.key==='Enter' || event.key===' ') openNotificationPage()" style="position:relative">
       <i class="fas fa-bell"></i>
       <div class="notif-dot hide" id="notifDot"></div>
       <span class="bell-count hide" id="bellCount"></span>
     </div>
-    <div class="user-chip" id="userChip">
-      <div class="uc-av">AD</div>
-      <div>
-        <div class="uc-name" id="ucName">Admin</div>
-        <div class="uc-role">Administrator</div>
+    <div class="profile-menu" id="profileMenu">
+      <button type="button" class="user-chip" id="userChip" aria-haspopup="dialog" aria-controls="adminProfilePopup" aria-expanded="false">
+        <span class="uc-av"><?php if ($adminInitials !== ''): ?><?= htmlspecialchars($adminInitials, ENT_QUOTES, 'UTF-8') ?><?php else: ?><i class="fas fa-user" aria-hidden="true"></i><?php endif; ?></span>
+        <span class="user-chip-copy">
+          <span class="uc-name" id="ucName"><?= htmlspecialchars($adminProfileName !== '' ? $adminProfileName : 'Not available', ENT_QUOTES, 'UTF-8') ?></span>
+          <span class="uc-role">Admin</span>
+        </span>
+        <i class="fas fa-chevron-down profile-chevron" aria-hidden="true"></i>
+      </button>
+      <div class="profile-popup" id="adminProfilePopup" role="dialog" aria-label="Administrator profile" hidden>
+        <section class="profile-section">
+          <h3 class="profile-section-heading"><i class="fas fa-user-shield" aria-hidden="true"></i> About Admin</h3>
+          <dl class="profile-details">
+            <div><dt>Name</dt><dd>Admin</dd></div>
+          </dl>
+          <p class="profile-description">The administrator is responsible for managing and monitoring the SFMS, including reviewing submitted feedback, viewing reports and analytics, managing healthcare services, monitoring staff ratings, checking audit logs, and maintaining system settings.</p>
+        </section>
+        <section class="profile-section">
+          <h3 class="profile-section-heading"><i class="fas fa-hospital" aria-hidden="true"></i> About SFMS</h3>
+          <dl class="profile-details">
+            <div><dt>System Name</dt><dd>Smart Feedback Management System</dd></div>
+          </dl>
+          <p class="profile-description">A digital platform designed to collect, manage, monitor, and analyze client feedback about healthcare services and facility experiences.</p>
+        </section>
+        <div class="profile-section profile-logout-section">
+          <button type="button" class="profile-logout-button" onclick="requestProfileLogout()"><i class="fas fa-right-from-bracket" aria-hidden="true"></i> Logout</button>
+        </div>
       </div>
     </div>
   </nav>
@@ -389,7 +419,7 @@ if (!isset($_SESSION['admin_id'])) {
           <div class="b-hd"><h4>Recent Comment</h4><i class="fas fa-comments"></i></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px">
               <div></div>
-              <div style="display:flex;align-items:center;gap:8px"><input class="form-input" style="width:260px;padding:6px 10px;font-size:12px" placeholder="Search recent experience..." id="notifSearch" oninput="renderNotifs(loadEntries())"></div>
+              <div style="display:flex;align-items:center;gap:8px"><input class="form-input" style="width:260px;padding:6px 10px;font-size:12px" placeholder="Search recent experience..." id="notifSearch" aria-label="Search recent feedback comments"><span id="notifSearchStatus" role="status" aria-live="polite"></span></div>
             </div>
             <div id="dashboardNotifList"><div class="empty-state"><i class="fas fa-bell"></i><p>No notification yet.</p></div></div>
         </div>
@@ -623,9 +653,10 @@ if (!isset($_SESSION['admin_id'])) {
                 <div><div class="service-management-kicker">Facility catalog</div><h4>Service Management</h4></div>
               </div>
               <div class="service-management-controls">
-                <label class="service-search-control" for="serviceSearch"><i class="fas fa-search" aria-hidden="true"></i><span class="sr-only">Search services</span><input class="form-input" type="search" placeholder="Search services" id="serviceSearch" oninput="renderServices()"></label>
-                <select class="form-select service-status-filter" id="serviceStatusFilter" aria-label="Filter services by status" onchange="renderServices()"><option value="active" selected>Active</option><option value="inactive">Inactive</option><option value="all">All statuses</option></select>
+                <label class="service-search-control" for="serviceSearch"><i class="fas fa-search" aria-hidden="true"></i><span class="sr-only">Search services</span><input class="form-input" type="search" placeholder="Search services" id="serviceSearch"></label>
+                <select class="form-select service-status-filter" id="serviceStatusFilter" aria-label="View services by archive status" onchange="renderServices()"><option value="active" selected>Active Services</option><option value="inactive">Archived Services</option><option value="all">All Services</option></select>
                 <button class="btn-primary service-add-button" onclick="openServiceModal()"><i class="fas fa-plus"></i><span>Add Service</span></button>
+                <span class="service-search-status" id="serviceSearchStatus" role="status" aria-live="polite"></span>
               </div>
               <div class="tbl-filters service-filters">
                 <button class="f-chip active" data-filter="all" onclick="filterServices('all',this)">All</button>
@@ -664,7 +695,13 @@ if (!isset($_SESSION['admin_id'])) {
             </div>
             <div class="staff-rating-controls">
               <label class="staff-search-control" for="staffRoleSearch"><i class="fas fa-search" aria-hidden="true"></i><span class="sr-only">Search staff roles</span><input class="form-input" type="search" id="staffRoleSearch" placeholder="Search staff roles..." aria-label="Search staff roles" oninput="searchStaffRatings(this.value)"></label>
+              <select class="form-select staff-status-filter" id="staffStatusFilter" aria-label="View staff by archive status" onchange="setStaffRoleView(this.value)">
+                <option value="active" selected>Active Staff</option>
+                <option value="archived">Archived Staff</option>
+                <option value="all">All Staff</option>
+              </select>
               <button type="button" class="btn-primary staff-add-button" onclick="openAddStaffModal()" title="Add a new staff role"><i class="fas fa-plus"></i><span>Add Staff</span></button>
+              <span class="staff-search-status" id="staffSearchStatus" role="status" aria-live="polite"></span>
             </div>
             <div class="tbl-filters staff-filters">
               <button class="f-chip active" data-filter="all" onclick="filterStaff('all',this)">All</button>
@@ -706,7 +743,6 @@ if (!isset($_SESSION['admin_id'])) {
             <div class="notification-actions">
               <label class="notification-select-all"><input type="checkbox" id="notificationSelectAll" onchange="toggleAllNotifications(this.checked)"> <span>Select All</span></label>
               <button type="button" class="btn-secondary notification-delete-btn" onclick="deleteSelectedNotifications()"><i class="fas fa-trash"></i> Delete</button>
-              <button type="button" class="btn-secondary notification-delete-btn" onclick="deleteAllReadNotifications()"><i class="fas fa-trash-can"></i> Delete All</button>
             </div>
           </div>
           <div class="notification-feedback" id="notificationFeedback" role="status" aria-live="polite"></div>
@@ -718,9 +754,22 @@ if (!isset($_SESSION['admin_id'])) {
     <div class="page" id="page-audit">
       <div class="sec-head"><div class="sec-pre">Admin</div><h3>Audit Log</h3></div>
       <div class="audit-wrap">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="audit-header">
           <h4 style="margin:0">Audit Log</h4>
-          <div style="display:flex;align-items:center;gap:8px"><input class="form-input" style="width:260px;padding:6px 10px;font-size:12px" placeholder="Search audit..." id="auditSearch" oninput="renderAudit()"></div>
+          <div class="audit-controls">
+            <label class="audit-search-field"><span class="sr-only">Search Audit Records</span><input class="form-input" placeholder="Search Audit Records..." id="auditSearch" aria-label="Search Audit Records"></label>
+            <span class="audit-search-status" id="auditSearchStatus" role="status" aria-live="polite"></span>
+            <div class="audit-date-control">
+              <select class="form-select audit-date-filter" id="auditDateFilter" aria-label="Filter audit records by date" onchange="handleAuditDateFilterChange()">
+                <option value="today" selected>Today</option>
+                <option value="this-week">This Week</option>
+                <option value="last-month">Last Month</option>
+                <option value="all">All Dates</option>
+                <option value="custom">Custom Date</option>
+              </select>
+              <input class="audit-date-picker" type="date" id="auditCustomDate" aria-label="Select a custom audit date" aria-hidden="true" tabindex="-1" onchange="handleAuditCustomDateChange()">
+            </div>
+          </div>
         </div>
         <table class="audit-tbl">
           <thead><tr><th>Timestamp</th><th>Admin</th><th>Action</th><th>Reference</th><th>Detail</th></tr></thead>
@@ -944,6 +993,7 @@ function nav(el) {
   if (target === 'reports') { renderReportCharts(); }
   if (target === 'services') renderServices();
   if (target === 'staff') renderStaffTable();
+  if (target === 'audit' && typeof window.initializeAuditLog === 'function') window.initializeAuditLog();
   if (isRespondentPage) renderRespondentCategoryTable(respondentPages[target]);
   if (target === 'pending' || target === 'resolved') renderFbLists();
   if (target === 'notifications' && typeof syncNotifications === 'function') {
@@ -1170,6 +1220,27 @@ function closeLogoutConfirmation() {
 
 function confirmLogout() {
   document.getElementById('logoutForm')?.submit();
+}
+
+function closeAdminProfilePopup() {
+  const popup = document.getElementById('adminProfilePopup');
+  const chip = document.getElementById('userChip');
+  if (!popup || !chip) return;
+  popup.hidden = true;
+  chip.setAttribute('aria-expanded', 'false');
+}
+
+function toggleAdminProfilePopup() {
+  const popup = document.getElementById('adminProfilePopup');
+  const chip = document.getElementById('userChip');
+  if (!popup || !chip) return;
+  popup.hidden = !popup.hidden;
+  chip.setAttribute('aria-expanded', String(!popup.hidden));
+}
+
+function requestProfileLogout() {
+  closeAdminProfilePopup();
+  document.getElementById('logoutForm')?.requestSubmit();
 }
 
 async function confirmSaveSettings() {
@@ -1445,31 +1516,26 @@ function updateNotificationSelectAllState() {
   selectAll.checked = notificationCache.length > 0 && notificationCache.every(notification => selectedNotificationIds.has(notification.id));
 }
 
-async function deleteNotifications(ids, deleteAllRead = false) {
-  if (!ids.length && !deleteAllRead) {
+async function deleteNotifications(ids) {
+  if (!ids.length) {
     document.getElementById('notificationList')?.classList.add('selection-mode');
     showNotificationFeedback('Select at least one notification to delete.');
     return;
   }
-  const selected = deleteAllRead ? notificationCache.filter(notification => notification.isRead).map(notification => notification.id) : ids;
   const unreadSelected = notificationCache.some(notification => ids.includes(notification.id) && !notification.isRead);
   if (unreadSelected) {
     showNotificationFeedback('Please read the notification before deleting it.');
-    return;
-  }
-  if (!selected.length) {
-    showNotificationFeedback('There are no read notifications to delete.');
     return;
   }
   try {
     const response = await fetch('/Feedback/api/notifications.php', {
       method: 'DELETE',
       headers: csrfHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
-      body: JSON.stringify({ ids: selected }),
+      body: JSON.stringify({ ids }),
     });
     const payload = await response.json();
     if (!response.ok || !payload.success) throw new Error(payload.message || 'Unable to delete notifications.');
-    selected.forEach(id => selectedNotificationIds.delete(id));
+    ids.forEach(id => selectedNotificationIds.delete(id));
     showNotificationFeedback('Notifications deleted.', false);
     await syncNotifications();
   } catch (error) {
@@ -1479,10 +1545,6 @@ async function deleteNotifications(ids, deleteAllRead = false) {
 
 function deleteSelectedNotifications() {
   deleteNotifications(Array.from(selectedNotificationIds));
-}
-
-function deleteAllReadNotifications() {
-  deleteNotifications([], true);
 }
 
 async function syncNotifications({ markAllRead = false } = {}) {
@@ -2179,7 +2241,9 @@ function renderServices() {
         <div class="dropdown-menu">
           <button class="dropdown-item" onclick="openServiceModal(${s.id})"><i class="fas fa-edit"></i> Edit</button>
           <button class="dropdown-item" onclick="manageSubservices(${s.id})"><i class="fas fa-list"></i> Manage Subservices</button>
-          <button class="dropdown-item text-red" onclick="deleteService(${s.id})"><i class="fas fa-trash"></i> Delete</button>
+          ${(s.status || 'active') === 'inactive'
+            ? `<button class="dropdown-item" onclick="restoreService(${s.id})"><i class="fas fa-undo"></i> Restore</button>`
+            : `<button class="dropdown-item text-red" onclick="archiveService(${s.id})"><i class="fas fa-box-archive"></i> Archive</button>`}
         </div>
       </div></td>
     </tr>`;
@@ -2300,52 +2364,33 @@ async function permanentlyDeleteSubservice(id, serviceId) {
   }
 }
 
-async function deleteService(id) {
+async function archiveService(id) {
   const service = flatServices().find(item => Number(item.id) === Number(id));
   const label = service?.name || `service #${id}`;
   if (!(await AdminUI.confirm({
-    title: 'Deactivate service?',
-    message: `Deactivate "${label}"? It will no longer be available for new feedback, but existing feedback will be preserved.`,
-    confirmLabel: 'Deactivate',
+    title: 'Archive service?',
+    message: `Archive "${label}"? It will be removed from the public feedback form, but its service, sub-services, and feedback history will be preserved.`,
+    confirmLabel: 'Archive',
   }))) return;
   try {
-    await catalogPost('deleteService',{id});
+    await catalogPost('archiveService', { id });
     addAudit('admin','Deleted service',String(id),'Service removed');
     await window.AdminDashboardStore?.refreshModules?.(true);
     renderServices();
-    AdminUI.toast(`"${label}" was deactivated.`, 'success');
+    AdminUI.toast(`"${label}" was archived.`, 'success');
   }
-  catch(e) { AdminUI.toast(e.message || 'Unable to deactivate service.', 'error'); }
+  catch(e) { AdminUI.toast(e.message || 'Unable to archive service.', 'error'); }
 }
 
-async function reactivateService(id) {
+async function restoreService(id) {
   try {
-    await catalogPost('reactivateService',{id});
+    await catalogPost('reactivateService', { id });
     addAudit('admin','Reactivated service',String(id),'Service reactivated');
     await window.AdminDashboardStore?.refreshModules?.(true);
     renderServices();
-    AdminUI.toast('Service reactivated.', 'success');
+    AdminUI.toast('Service restored.', 'success');
   }
-  catch(e) { AdminUI.toast(e.message || 'Unable to reactivate service.', 'error'); }
-}
-
-async function permanentlyDeleteService(id) {
-  const service = flatServices().find(item => Number(item.id) === Number(id));
-  const label = service?.name || `service #${id}`;
-  if (!(await AdminUI.confirm({
-    title: 'Permanently delete service?',
-    message: `Permanently delete "${label}"? This cannot be undone. If it has feedback history or sub-services, deletion will be blocked and you should deactivate it instead.`,
-    confirmLabel: 'Delete permanently',
-    tone: 'danger',
-  }))) return;
-  try {
-    await catalogPost('deleteServicePermanently',{id});
-    addAudit('admin','Permanently deleted service',String(id),label);
-    await window.AdminDashboardStore?.refreshModules?.(true);
-    renderServices();
-    AdminUI.toast(`"${label}" was permanently deleted.`, 'success');
-  }
-  catch(e) { AdminUI.toast(e.message || 'Unable to permanently delete service.', 'error'); }
+  catch(e) { AdminUI.toast(e.message || 'Unable to restore service.', 'error'); }
 }
 
 /* ══════════════════════════════
@@ -2523,28 +2568,37 @@ function openEditStaffRoleModal(id) {
   openModal('Edit Staff Role');
 }
 
-function openDeleteStaffRoleModal(id) {
+function openArchiveStaffRoleModal(id) {
   const role = getCachedStaffRole(id);
   if (!role) return AdminUI.toast('Staff role not found.', 'error');
-  modalAction = 'deleteStaffRole';
+  modalAction = 'archiveStaffRole';
   modalEditId = id;
   document.getElementById('modalBody').innerHTML = `
-    <p style="font-size:13px;color:var(--ink-2);margin:0 0 16px;line-height:1.5">Are you sure you want to delete "<strong>${esc(role.label)}</strong>"? If it has existing feedback ratings, it will be safely deactivated instead — historical ratings are never lost.</p>`;
-  openModal('Delete Staff Role?', true);
+    <p style="font-size:13px;color:var(--ink-2);margin:0 0 16px;line-height:1.5">Archive "<strong>${esc(role.label)}</strong>"? It will be hidden from the active role list and public feedback form. Historical ratings will be preserved.</p>`;
+  openModal('Archive Staff Role?', true);
   const delBtn = document.getElementById('modalDelete');
   if (delBtn) delBtn.style.display = 'inline-flex';
 }
 
-async function confirmDeleteStaffRole(id) {
+async function confirmArchiveStaffRole(id) {
   const roleId = id || modalEditId;
   if (!roleId) return;
   try {
-    await staffRolesPost('deleteRole', { id: Number(roleId) });
-    addAudit('admin','Deleted staff role',String(roleId),'—');
+    await staffRolesPost('archiveRole', { id: Number(roleId) });
+    addAudit('admin','Archived staff role',String(roleId),'—');
     closeModal();
     await refreshStaffRolesUI();
-    AdminUI.toast('Staff role updated.', 'success');
-  } catch(e) { AdminUI.toast(e.message || 'Delete failed.', 'error'); }
+    AdminUI.toast('Staff role archived.', 'success');
+  } catch(e) { AdminUI.toast(e.message || 'Archive failed.', 'error'); }
+}
+
+async function restoreStaffRole(id) {
+  try {
+    await staffRolesPost('restoreRole', { id: Number(id) });
+    addAudit('admin','Restored staff role',String(id),'—');
+    await refreshStaffRolesUI();
+    AdminUI.toast('Staff role restored.', 'success');
+  } catch(e) { AdminUI.toast(e.message || 'Restore failed.', 'error'); }
 }
 
 async function handleModalSave() {
@@ -2898,7 +2952,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('logoutConfirmOverlay')?.addEventListener('click', event => {
     if (event.target === event.currentTarget) closeLogoutConfirmation();
   });
+  document.getElementById('userChip')?.addEventListener('click', toggleAdminProfilePopup);
+  document.addEventListener('click', event => {
+    if (!event.target.closest('#profileMenu')) closeAdminProfilePopup();
+  });
   document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeAdminProfilePopup();
     if (event.key === 'Escape' && !document.getElementById('logoutConfirmOverlay')?.hidden) {
       closeLogoutConfirmation();
     }
@@ -2931,20 +2990,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-document.getElementById('userChip').addEventListener('click',()=>{
-  nav(document.querySelector('[data-page=settings]'));
-});
 </script>
 <!--
   The staff-role rating table is rendered by the modular dashboard scripts.
   Keep their cache versions together so a deployment cannot combine this
   page with a browser-cached bundle from before Staff Ratings was restored.
 -->
-<script src="../js/admin/formatters.js?v=20261027-recent-feedback-columns"></script>
-<script src="../js/admin/feedbackService.js?v=20260922-status-csrf"></script>
+<script src="../js/admin/formatters.js?v=20261116-staff-role-archive"></script>
+<script src="../js/admin/feedbackService.js?v=20261119-all-search"></script>
 <script src="../js/admin/store.js?v=20260913-service-subtypes"></script>
-<script src="../js/admin/renderers.js?v=20261027-report-response-cards"></script>
-<script src="../js/admin/bootstrap.js?v=20261021-a4-healthcare-report"></script>
+<script src="../js/admin/renderers.js?v=20261119-all-search"></script>
+<script src="../js/admin/bootstrap.js?v=20261119-all-search"></script>
 <script src="../js/admin/printReport.js?v=20261021-period-select"></script>
 <script>
   // Ensure inline nav logic wins and keep only one sub-item active at a time.

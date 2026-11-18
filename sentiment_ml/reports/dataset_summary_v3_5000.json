@@ -1,0 +1,283 @@
+{
+  "passed": true,
+  "errors": [],
+  "total_samples": 5000,
+  "language_counts": {
+    "Bisaya/Cebuano": 1666,
+    "English": 1667,
+    "Filipino/Tagalog": 1667
+  },
+  "sentiment_counts": {
+    "Neutral": 1666,
+    "Positive": 1667,
+    "Negative": 1667
+  },
+  "per_language_sentiment": {
+    "English": {
+      "Positive": 556,
+      "Neutral": 555,
+      "Negative": 556
+    },
+    "Filipino/Tagalog": {
+      "Neutral": 556,
+      "Negative": 555,
+      "Positive": 556
+    },
+    "Bisaya/Cebuano": {
+      "Neutral": 555,
+      "Negative": 556,
+      "Positive": 555
+    }
+  },
+  "split_counts": {
+    "train": 3500,
+    "validation": 750,
+    "test": 750
+  },
+  "split_language_sentiment_counts": {
+    "English/Positive": {
+      "train": 389,
+      "validation": 84,
+      "test": 83
+    },
+    "English/Negative": {
+      "train": 389,
+      "validation": 84,
+      "test": 83
+    },
+    "English/Neutral": {
+      "train": 389,
+      "validation": 83,
+      "test": 83
+    },
+    "Filipino/Tagalog/Positive": {
+      "train": 389,
+      "validation": 84,
+      "test": 83
+    },
+    "Filipino/Tagalog/Negative": {
+      "train": 389,
+      "validation": 83,
+      "test": 83
+    },
+    "Filipino/Tagalog/Neutral": {
+      "train": 389,
+      "validation": 83,
+      "test": 84
+    },
+    "Bisaya/Cebuano/Positive": {
+      "train": 389,
+      "validation": 83,
+      "test": 83
+    },
+    "Bisaya/Cebuano/Negative": {
+      "train": 389,
+      "validation": 83,
+      "test": 84
+    },
+    "Bisaya/Cebuano/Neutral": {
+      "train": 388,
+      "validation": 83,
+      "test": 84
+    }
+  },
+  "topic_mentions": {
+    "botika at pagkuha ng gamot": 227,
+    "botika ug pagkuha sa tambal": 210,
+    "care coordination and patient satisfaction": 197,
+    "doctor consultation": 208,
+    "facility cleanliness and sanitation": 208,
+    "kalimpyo ug sanitasyon sa pasilidad": 211,
+    "kalinisan at sanitasyon ng pasilidad": 205,
+    "konsultasyon sa doktor": 448,
+    "koordinasyon sa pag-atiman ug katagbawan sa pasyente": 217,
+    "laboratory result release": 193,
+    "laboratory testing": 221,
+    "lingkoranan ug bentilasyon": 213,
+    "medical documents and certificates": 206,
+    "mental health counseling": 223,
+    "mga dokumentong medikal at sertipiko": 195,
+    "mga dokumentong medikal ug sertipiko": 218,
+    "nursing care": 239,
+    "nutrition counseling": 197,
+    "oras ng paghihintay at pila": 220,
+    "oras sa paghulat ug pila": 215,
+    "pag-atiman sa nars": 220,
+    "pagbabakuna at serbisyong pangkalusugan sa komunidad": 220,
+    "pagbakuna ug serbisyong panglawas sa komunidad": 204,
+    "paglabas ng resulta sa laboratoryo": 193,
+    "pagpagawas sa resulta sa laboratoryo": 195,
+    "pagpaparehistro at impormasyon sa serbisyo": 209,
+    "pagpapayo para sa kalusugang pangkaisipan": 210,
+    "pagpapayo tungkol sa nutrisyon": 204,
+    "pagparehistro ug impormasyon sa serbisyo": 194,
+    "pagsasaayos ng pangangalaga at kasiyahan ng pasyente": 189,
+    "pagsusi sa laboratoryo": 226,
+    "pagsusuri sa laboratoryo": 196,
+    "pangangalaga ng nars": 189,
+    "paunang pagsusuri at pag-uuri": 197,
+    "pharmacy and medicine access": 199,
+    "physical accessibility": 170,
+    "pisikal na aksesibilidad": 215,
+    "pisikal nga pagkaabot sa pasilidad": 199,
+    "registration and service information": 225,
+    "seating and ventilation": 205,
+    "tambag alang sa kahimsog sa pangisip": 220,
+    "tambag bahin sa nutrisyon": 190,
+    "triage and initial assessment": 208,
+    "unang pagsusi ug paghan-ay": 185,
+    "upuan at bentilasyon": 232,
+    "vaccination and public health outreach": 216,
+    "waiting time and queue management": 219
+  },
+  "record_ids_unique": true,
+  "normalized_text_duplicates": 0,
+  "exact_overlap_with_original_900": 0,
+  "semantic_families_cross_splits": 0,
+  "reused_event_sentences": 0,
+  "repeated_semantic_family_pairs": 0,
+  "near_duplicate_check": {
+    "method": "SequenceMatcher ratio on complete records sharing a semantic family",
+    "threshold": 0.88,
+    "pairs_checked": 14075,
+    "pairs_at_or_above_threshold": 0,
+    "maximum_similarity": 0.8714
+  },
+  "dataset_name": "SFMS Multilingual Healthcare Sentiment Dataset v3",
+  "version": "3.0",
+  "seed": 20261117,
+  "provenance": "developer-generated synthetic examples; no external source",
+  "source_group": "generated_synthetic_v3",
+  "review_status": "Pending",
+  "split_ratios": {
+    "train": 0.7,
+    "validation": 0.15,
+    "test": 0.15
+  },
+  "split_allocation": {
+    "stratum_counts": {
+      "English/Positive": 556,
+      "English/Negative": 556,
+      "English/Neutral": 555,
+      "Filipino/Tagalog/Positive": 556,
+      "Filipino/Tagalog/Negative": 555,
+      "Filipino/Tagalog/Neutral": 556,
+      "Bisaya/Cebuano/Positive": 555,
+      "Bisaya/Cebuano/Negative": 556,
+      "Bisaya/Cebuano/Neutral": 555
+    },
+    "stratum_split_targets": {
+      "English/Positive": {
+        "train": 389,
+        "validation": 84,
+        "test": 83
+      },
+      "English/Negative": {
+        "train": 389,
+        "validation": 84,
+        "test": 83
+      },
+      "English/Neutral": {
+        "train": 389,
+        "validation": 83,
+        "test": 83
+      },
+      "Filipino/Tagalog/Positive": {
+        "train": 389,
+        "validation": 84,
+        "test": 83
+      },
+      "Filipino/Tagalog/Negative": {
+        "train": 389,
+        "validation": 83,
+        "test": 83
+      },
+      "Filipino/Tagalog/Neutral": {
+        "train": 389,
+        "validation": 83,
+        "test": 84
+      },
+      "Bisaya/Cebuano/Positive": {
+        "train": 389,
+        "validation": 83,
+        "test": 83
+      },
+      "Bisaya/Cebuano/Negative": {
+        "train": 389,
+        "validation": 83,
+        "test": 84
+      },
+      "Bisaya/Cebuano/Neutral": {
+        "train": 388,
+        "validation": 83,
+        "test": 84
+      }
+    },
+    "family_split_count": {
+      "train": 2421,
+      "validation": 522,
+      "test": 513
+    }
+  },
+  "split_targets_by_stratum": {
+    "English/Positive": {
+      "train": 389,
+      "validation": 84,
+      "test": 83
+    },
+    "English/Negative": {
+      "train": 389,
+      "validation": 84,
+      "test": 83
+    },
+    "English/Neutral": {
+      "train": 389,
+      "validation": 83,
+      "test": 83
+    },
+    "Filipino/Tagalog/Positive": {
+      "train": 389,
+      "validation": 84,
+      "test": 83
+    },
+    "Filipino/Tagalog/Negative": {
+      "train": 389,
+      "validation": 83,
+      "test": 83
+    },
+    "Filipino/Tagalog/Neutral": {
+      "train": 389,
+      "validation": 83,
+      "test": 84
+    },
+    "Bisaya/Cebuano/Positive": {
+      "train": 389,
+      "validation": 83,
+      "test": 83
+    },
+    "Bisaya/Cebuano/Negative": {
+      "train": 389,
+      "validation": 83,
+      "test": 84
+    },
+    "Bisaya/Cebuano/Neutral": {
+      "train": 388,
+      "validation": 83,
+      "test": 84
+    }
+  },
+  "original_master_sha256_before": "512d998a69f9136dbe6732c62704f41a0477d0a5d1b8d26c67694586675669d8",
+  "outputs": {
+    "master": "data\\labeled\\sfms_sentiment_v3_5000.csv",
+    "train": "data\\splits\\v3_5000\\train.csv",
+    "validation": "data\\splits\\v3_5000\\validation.csv",
+    "test": "data\\splits\\v3_5000\\test.csv"
+  },
+  "original_master_sha256_after": "512d998a69f9136dbe6732c62704f41a0477d0a5d1b8d26c67694586675669d8",
+  "outputs_sha256": {
+    "data\\labeled\\sfms_sentiment_v3_5000.csv": "61986a59dd68f44b166c892ae2514fc3ee225dab7eb0dc5eed1382438c93b0dd",
+    "data\\splits\\v3_5000\\train.csv": "908d2013dfc8ae82fb8e64b8f3fc2e3ba8c5c5c3ae126acba281e5935b7c6981",
+    "data\\splits\\v3_5000\\validation.csv": "17815e4118adca06fd016a67b1381308c5c6821d1325416591908d5ed4ad1ef0",
+    "data\\splits\\v3_5000\\test.csv": "9ef7c352827c380b626f5519b209329a33a530a81f53b9361efa91de6d125377"
+  }
+}

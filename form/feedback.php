@@ -33,8 +33,8 @@ $staffRoleEmojis = [
 ];
 
 // Fallback only — used if the `staff` table can't be reached (so the
-// survey still renders). Whenever the database is reachable, it fully
-// overrides this with the current, active-only labels/order.
+// survey still renders). Whenever the database is reachable, its active
+// roles fully replace this list, including when there are none.
 $officialStaffRoleLabels = [
     'st0' => 'Doctor',
     'st1' => 'Dentist',
@@ -55,11 +55,9 @@ try {
     $staffRoleRows = $pdo
         ->query('SELECT role, full_name FROM staff WHERE is_active = 1 ORDER BY LENGTH(role), role')
         ->fetchAll();
-    if ($staffRoleRows) {
-        $officialStaffRoleLabels = [];
-        foreach ($staffRoleRows as $staffRoleRow) {
-            $officialStaffRoleLabels[$staffRoleRow['role']] = $staffRoleRow['full_name'];
-        }
+    $officialStaffRoleLabels = [];
+    foreach ($staffRoleRows as $staffRoleRow) {
+        $officialStaffRoleLabels[$staffRoleRow['role']] = $staffRoleRow['full_name'];
     }
     $facilityStmt = $pdo->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'admin_facility_name' LIMIT 1");
     $facilityStmt->execute();
@@ -80,7 +78,7 @@ try {
 <title><?= htmlspecialchars($t['fb2_pageTitle']) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/feedback-form.css?v=20261022-section6-restore">
+<link rel="stylesheet" href="../assets/css/feedback-form.css?v=20261116-consent-submit-state">
 </head>
 <body>
 <div class="bg-mesh"></div>
@@ -102,6 +100,17 @@ try {
       <button class="btn-submit" style="min-width:130px;" onclick="document.getElementById('successModal').classList.remove('open')">
         <span class="lbl"><?= htmlspecialchars($t['fb2_modalClose']) ?></span>
       </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop privacy-modal-backdrop" id="privacyModal" aria-hidden="true">
+  <div class="modal-card privacy-modal-card" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle" aria-describedby="privacyModalContent">
+    <h2 class="modal-title" id="privacyModalTitle"><?= htmlspecialchars($t['onboardingPrivacyTitle']) ?></h2>
+    <div class="privacy-modal-content" id="privacyModalContent"><?= $t['onboardingPrivacyTextUpdated'] ?></div>
+    <div class="privacy-modal-actions">
+      <button type="button" class="btn-ghost" id="closePrivacyModal"><?= htmlspecialchars($t['successCloseButton']) ?></button>
+      <button type="button" class="btn-submit" id="acceptPrivacyModal"><?= htmlspecialchars($t['onboardingPrivacyAccept']) ?></button>
     </div>
   </div>
 </div>
@@ -291,7 +300,7 @@ include __DIR__ . '/../includes/header.php';
       <label class="field-label" for="petsa"><?= htmlspecialchars($t['fb2_dateLabel']) ?> <span class="req">*</span></label>
       <div class="finput-wrap">
         <span class="finput-icon" aria-hidden="true">📅</span>
-        <input class="finput" type="date" id="petsa" name="petsa" required aria-required="true">
+        <input class="finput" type="date" id="petsa" name="petsa" max="<?= htmlspecialchars(date('Y-m-d'), ENT_QUOTES) ?>" required aria-required="true">
       </div>
     </div>
 
@@ -421,8 +430,6 @@ include __DIR__ . '/../includes/header.php';
       <span class="sec-badge badge-green"><?= htmlspecialchars(sprintf($t['fb2_secBadge'], 4)) ?></span>
     </div>
   </div>
-  <div class="instr-pill" role="note"><?= htmlspecialchars($t['fb2_ratingInstr']) ?></div>
-
   <div class="subsec" aria-label="Subsection A"><?= htmlspecialchars($t['fb2_subsecA']) ?> <span class="req" aria-hidden="true">*</span></div>
   <div class="rating-scroll" role="region" aria-label="Infrastructure and Process ratings" aria-describedby="ratA-summary">
     <table class="rating-tbl" aria-describedby="ratA-summary">
@@ -472,8 +479,6 @@ include __DIR__ . '/../includes/header.php';
       <span class="sec-badge badge-green"><?= htmlspecialchars(sprintf($t['fb2_secBadge'], 5)) ?></span>
     </div>
   </div>
-  <div class="instr-pill" role="note"><?= htmlspecialchars($t['fb2_staffInstr']) ?></div>
-
   <div class="subsec" aria-label="Healthcare staff ratings"><?= htmlspecialchars($t['fb2_subsecStaff']) ?> <span class="req" aria-hidden="true">*</span></div>
   <div class="rating-scroll" role="region" aria-label="Staff courtesy ratings" aria-describedby="ratStaff-summary">
     <table class="rating-tbl" aria-describedby="ratStaff-summary">
@@ -544,17 +549,22 @@ include __DIR__ . '/../includes/header.php';
   <!-- ══ SUBMIT DOCK ══ -->
   <div class="submit-dock" role="region" aria-label="Form submission">
     <div class="submit-inner">
-      <label class="consent-row">
-        <input type="checkbox" id="consentChk" required aria-required="true">
-        <span class="consent-text">
-          ✅ <?= $t['fb2_consentText'] ?>
-        </span>
-      </label>
+      <div class="consent-group">
+        <label class="consent-row">
+          <input type="checkbox" id="consentChk" required aria-required="true">
+          <span class="consent-text">
+            <?= $t['fb2_consentText'] ?>
+          </span>
+        </label>
+        <button type="button" class="privacy-notice-link" id="openPrivacyModal" aria-haspopup="dialog" aria-controls="privacyModal">
+          <?= htmlspecialchars($t['fb2_viewFullDataPrivacy']) ?>
+        </button>
+      </div>
       <div class="submit-btns">
         <button type="button" class="btn-clear" onclick="resetSurvey()" aria-label="Clear all survey fields">
           <?= htmlspecialchars($t['fb2_btnClear']) ?>
         </button>
-        <button type="submit" class="btn-submit" id="submitBtn" aria-label="Submit survey">
+        <button type="submit" class="btn-submit" id="submitBtn" aria-label="Submit survey" disabled>
           <div class="spin" aria-hidden="true"></div>
           <span class="lbl"><?= htmlspecialchars($t['fb2_btnSubmit']) ?></span>
         </button>
@@ -589,6 +599,7 @@ const FB2_I18N = <?= json_encode([
   'msgs' => [
     'consentRequired' => $t['fb2_msgConsentRequired'], 'completeRequired' => $t['fb2_msgCompleteRequired'],
     'fieldRequired' => $t['fb2_msgFieldRequired'], 'completeField' => $t['fb2_msgCompleteField'],
+    'invalidDate' => $t['fb2_submitErrInvalidDate'],
     'commentTooLong' => $t['fb2_section6ErrCommentTooLong'],
     'staffTooLong' => $t['fb2_section6ErrStaffTooLong'],
     'ratingRemainingOne' => $t['fb2_msgRatingRemainingOne'], 'ratingRemainingMany' => $t['fb2_msgRatingRemainingMany'],
@@ -786,6 +797,43 @@ const ratingSections=[
   {tbodyId:'ratStaff',summaryId:'ratStaff-summary',groups:staffList.map(item=>item.id)},
   {tbodyId:'ratC',summaryId:'ratC-summary',groups:ratingsC.map(item=>item.id)},
 ];
+
+// Keep each original thead in a normal-flow sticky table above its matching
+// question table. The two tables share the measured width and horizontal
+// scroll position, so every heading stays over its original answer column.
+ratingSections.forEach(section=>{
+  const tbody=document.getElementById(section.tbodyId);
+  const table=tbody?.closest('table');
+  const scroll=table?.closest('.rating-scroll');
+  const subsection=scroll?.previousElementSibling;
+  const summary=scroll?.nextElementSibling;
+  const thead=table?.tHead;
+  if(!table || !scroll || !thead || !subsection?.classList.contains('subsec')) return;
+
+  const ratingCard=document.createElement('div');
+  ratingCard.className='rating-subsection';
+  subsection.parentNode.insertBefore(ratingCard,subsection);
+  ratingCard.appendChild(subsection);
+
+  const stickyHead=document.createElement('div');
+  stickyHead.className='rating-sticky-head';
+  const headingTable=document.createElement('table');
+  headingTable.className=table.className;
+  headingTable.appendChild(thead);
+  stickyHead.appendChild(headingTable);
+  ratingCard.appendChild(stickyHead);
+  ratingCard.appendChild(scroll);
+  if(summary?.classList.contains('rating-validation-summary')) ratingCard.appendChild(summary);
+
+  const syncHeaderColumns=()=>{
+    stickyHead.style.width=`${scroll.clientWidth}px`;
+    headingTable.style.width=`${table.offsetWidth}px`;
+    headingTable.style.transform=`translateX(-${scroll.scrollLeft}px)`;
+  };
+  scroll.addEventListener('scroll',syncHeaderColumns,{passive:true});
+  window.addEventListener('resize',syncHeaderColumns);
+  syncHeaderColumns();
+});
 
 function getRatingSection(groupName){
   return ratingSections.find(section=>section.groups.includes(groupName)) || null;
@@ -1000,6 +1048,15 @@ function validateField(el,showError=true){
     const isValid=raw!=='' && /^\d{1,2}$/.test(raw) && Number(raw)>=1 && Number(raw)<=99;
     if(!isValid){
       if(showError) setValidationState(el,FB2_I18N.msgs.completeField);
+      return false;
+    }
+    clearValidationState(el);
+    return true;
+  }
+  if(el.id==='petsa'){
+    const isValid=Boolean(el.value) && el.value<=el.max;
+    if(!isValid){
+      if(showError) setValidationState(el,el.value ? FB2_I18N.msgs.invalidDate : FB2_I18N.msgs.fieldRequired);
       return false;
     }
     clearValidationState(el);
@@ -1428,7 +1485,7 @@ async function submitForm(e){
     const data=await resp.json();
 
     btn.classList.remove('loading');
-    btn.disabled=false;
+    syncSubmitButtonState();
     btn.querySelector('.lbl').textContent=FB2_I18N.msgs.submitLabel;
 
     if(data && data.success && data.data?.referenceId){
@@ -1441,7 +1498,7 @@ async function submitForm(e){
     toast(msg,'error');
   }catch(ex){
     btn.classList.remove('loading');
-    btn.disabled=false;
+    syncSubmitButtonState();
     btn.querySelector('.lbl').textContent=FB2_I18N.msgs.submitLabel;
     console.error('submit error',ex);
     toast(FB2_I18N.msgs.networkError,'error');
@@ -1453,12 +1510,47 @@ if(surveyForm){
   surveyForm.addEventListener('submit', submitForm);
 }
 
+const consentCheckbox=document.getElementById('consentChk');
+const submitButton=document.getElementById('submitBtn');
+function syncSubmitButtonState(){
+  if(!submitButton) return;
+  submitButton.disabled=!consentCheckbox?.checked || submitButton.classList.contains('loading');
+}
+consentCheckbox?.addEventListener('change',syncSubmitButtonState);
+syncSubmitButtonState();
+
+const privacyModal=document.getElementById('privacyModal');
+const openPrivacyModalButton=document.getElementById('openPrivacyModal');
+const closePrivacyModalButton=document.getElementById('closePrivacyModal');
+const acceptPrivacyModalButton=document.getElementById('acceptPrivacyModal');
+function closePrivacyNotice(){
+  if(!privacyModal) return;
+  privacyModal.classList.remove('open');
+  privacyModal.setAttribute('aria-hidden','true');
+  openPrivacyModalButton?.focus();
+}
+openPrivacyModalButton?.addEventListener('click',()=>{
+  if(!privacyModal) return;
+  privacyModal.classList.add('open');
+  privacyModal.setAttribute('aria-hidden','false');
+  closePrivacyModalButton?.focus();
+});
+closePrivacyModalButton?.addEventListener('click',closePrivacyNotice);
+acceptPrivacyModalButton?.addEventListener('click',closePrivacyNotice);
+privacyModal?.addEventListener('click',event=>{
+  if(event.target===privacyModal) closePrivacyNotice();
+});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape' && privacyModal?.classList.contains('open')) closePrivacyNotice();
+});
+
 /* ═══════════════════════════════════════
    RESET
 ═══════════════════════════════════════ */
 function resetSurvey(){
   const form=document.getElementById('mainForm');
   if(form) form.reset();
+  syncSubmitButtonState();
   renderServiceSubtypes();
 
   clearAllValidation();

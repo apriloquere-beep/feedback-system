@@ -1,0 +1,24 @@
+{
+  "dataset": "SFMS Multilingual Healthcare Sentiment Dataset v3",
+  "review_csv": "data\\reviews\\sfms_sentiment_v3_5000_review.csv",
+  "total_records": 5000,
+  "awaiting_review": 5000,
+  "review_status_counts": {
+    "Pending": 5000
+  },
+  "language_counts": {
+    "English": 1667,
+    "Filipino/Tagalog": 1667,
+    "Bisaya/Cebuano": 1666
+  },
+  "blank_review_fields": [
+    "Suggested corrected feedback",
+    "Verified sentiment label",
+    "Grammar status",
+    "Reviewer comments"
+  ],
+  "source_master_sha256_before": "61986a59dd68f44b166c892ae2514fc3ee225dab7eb0dc5eed1382438c93b0dd",
+  "original_900_master_sha256_before": "512d998a69f9136dbe6732c62704f41a0477d0a5d1b8d26c67694586675669d8",
+  "source_master_sha256_after": "61986a59dd68f44b166c892ae2514fc3ee225dab7eb0dc5eed1382438c93b0dd",
+  "original_900_master_sha256_after": "512d998a69f9136dbe6732c62704f41a0477d0a5d1b8d26c67694586675669d8"
+}

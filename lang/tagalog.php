@@ -330,6 +330,7 @@ return [
     'fb2_suggestionLabel' => 'Mungkahi (opsyonal)',
     'fb2_suggestionPlaceholder' => 'Magbigay ng isang mungkahi upang mapabuti ang serbisyo.',
     'fb2_consentText' => "Sumasang-ayon ako na ang aking mga sagot ay gagamitin upang mapabuti ang mga serbisyo ng pasilidad. Nauunawaan ko na ito ay <strong>kompidensyal</strong> at hindi ibabahagi nang walang pahintulot.",
+    'fb2_viewFullDataPrivacy' => 'Tingnan ang Buong Abiso sa Data Privacy',
     'fb2_btnClear' => 'I-clear ang Lahat',
     'fb2_btnSubmit' => 'Ipadala ang Survey →',
     'fb2_btnSubmitting' => 'Ipinapadala…',

@@ -426,6 +426,12 @@ function buildSummary(array $entries): array
 // GET — List feedbacks with optional filters
 // ════════════════════════════════════════════════════════════════════
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $isGlobalSearch = ($_GET['globalSearch'] ?? '') === '1';
+    $includeSearchFields = $isGlobalSearch || trim((string) ($_GET['search'] ?? '')) !== '';
+    if ($isGlobalSearch && trim((string) ($_GET['search'] ?? '')) === '') {
+        jsonResponse(['success' => false, 'message' => 'A search term is required.'], 422);
+    }
+
     try {
         $pdo  = getPdo();
         // feedback_entries is the workflow/status table (status updates and
@@ -444,6 +450,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 fe.service_subtype_id AS serviceSubtypeId,
                 st.name               AS serviceSubtype,
                 COALESCE(s.name, fe.service)      AS service,
+                COALESCE(NULLIF(fe.facility, \'\'), fb.facility) AS facility,
+                fe.service_other AS entryServiceOther, fe.service_other_enc AS entryServiceOtherEnc,
+                fe.service_subtype_other AS entryServiceSubtypeOther, fe.service_subtype_other_enc AS entryServiceSubtypeOtherEnc,
+                fb.service_other AS feedbackServiceOther, fb.service_other_enc AS feedbackServiceOtherEnc,
+                fb.service_subtype_other AS feedbackServiceSubtypeOther, fb.service_subtype_other_enc AS feedbackServiceSubtypeOtherEnc,
                 DATE_FORMAT(fe.visit_date, "%Y-%m-%d") AS visitDate,
                 fe.subject, fe.subject_enc AS subjectEnc,
                 fe.feedback, fe.feedback_enc AS feedbackEnc,
@@ -491,6 +502,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'email' => ['emailEnc', 'email'],
                 'contactNumber' => ['contactNumberEnc', 'contactNumber', 'contact_number'],
             ]);
+            if ($includeSearchFields) {
+                $row = $decryption->map($row, 'feedback_entries', $referenceId, [
+                    'serviceOther' => ['entryServiceOtherEnc', 'entryServiceOther', 'service_other'],
+                    'serviceSubtypeOther' => ['entryServiceSubtypeOtherEnc', 'entryServiceSubtypeOther', 'service_subtype_other'],
+                ]);
+                $row = $decryption->map($row, 'feedbacks', $referenceId, [
+                    'feedbackServiceOther' => ['feedbackServiceOtherEnc', 'feedbackServiceOther', 'service_other'],
+                    'feedbackServiceSubtypeOther' => ['feedbackServiceSubtypeOtherEnc', 'feedbackServiceSubtypeOther', 'service_subtype_other'],
+                ]);
+            }
 
             $ratings       = decodeRatings((string) ($row['ratings'] ?? ''));
             $timestamp     = isoTimestamp((string) ($row['timestamp'] ?? ''));
@@ -518,7 +539,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $isAnonymous = (bool) ($row['isAnonymous'] ?? false);
             $respondentTypeRaw = trim((string) ($row['respondentType'] ?? ''));
 
-            $entriesByRef[$referenceId] = [
+            $entry = [
                 'referenceId'    => $referenceId,
                 'userType'       => (string) ($row['userType']    ?? ''),
                 'isAnonymous'    => $isAnonymous,
@@ -552,11 +573,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'timestamp'      => $timestamp,
                 'updatedAt'      => isoTimestamp((string) ($row['updatedAt'] ?? $timestamp)),
             ];
+            if ($includeSearchFields) {
+                $entry += [
+                    'facility' => (string) ($row['facility'] ?? ''),
+                    'serviceOther' => (string) ($row['serviceOther'] ?? ''),
+                    'serviceSubtypeOther' => (string) ($row['serviceSubtypeOther'] ?? ''),
+                    'feedbackServiceOther' => (string) ($row['feedbackServiceOther'] ?? ''),
+                    'feedbackServiceSubtypeOther' => (string) ($row['feedbackServiceSubtypeOther'] ?? ''),
+                ];
+            }
+            $entriesByRef[$referenceId] = $entry;
         }
 
         $entries = array_values($entriesByRef);
         $filters = [
             'search'      => $_GET['search']      ?? '',
+            'searchScope' => $_GET['searchScope'] ?? '',
             'status'      => $_GET['status']      ?? '',
             'sentiment'   => $_GET['sentiment']   ?? '',  // NEW
             'priority'    => $_GET['priority']    ?? '',  // NEW
@@ -570,6 +602,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ];
 
         $filtered = applyFilters($entries, $filters);
+        if ($isGlobalSearch) {
+            $totalMatches = count($filtered);
+            $resultFields = array_fill_keys([
+                'referenceId', 'facility', 'service', 'serviceSubtype', 'serviceOther', 'serviceSubtypeOther',
+                'feedbackServiceOther', 'feedbackServiceSubtypeOther', 'subject', 'feedback', 'suggestions',
+                'appreciation', 'fullName', 'email', 'isAnonymous', 'timestamp',
+            ], true);
+            $results = array_map(
+                static fn (array $entry): array => array_intersect_key($entry, $resultFields),
+                array_slice($filtered, 0, 8)
+            );
+            jsonResponse([
+                'success' => true,
+                'data' => $results,
+                'totalMatches' => $totalMatches,
+            ]);
+        }
+
         $summary  = buildSummary($filtered);
 
         jsonResponse([

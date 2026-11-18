@@ -444,7 +444,7 @@ try {
         jsonResponse(['success' => false, 'message' => $apiLang['fb2_submitErrSuggestionTooLong']], 422);
     }
     $consultationDate = normalize_iso_date($payload['consultation_date'] ?? $payload['consultationDate'] ?? '');
-    if ($consultationDate === null) {
+    if ($consultationDate === null || $consultationDate > date('Y-m-d')) {
         jsonResponse(['success' => false, 'message' => $apiLang['fb2_submitErrInvalidDate']], 422);
     }
 

@@ -10,6 +10,28 @@
     }
   }
 
+  function renderAuditTable(auditRecords, searchTerm = '', emptyMessage = 'No audit entries found.') {
+    const normalizedSearch = String(searchTerm).trim().toLowerCase();
+    const filteredRecords = (Array.isArray(auditRecords) ? auditRecords : []).filter((item) => {
+      if (!normalizedSearch) return true;
+      const formattedDate = window.AdminDashboardFormatters.formatDate(item.timestamp);
+      const formattedDateTime = window.AdminDashboardFormatters.formatDateTime(item.timestamp);
+      return [item.timestamp, formattedDate, formattedDateTime, item.adminName, item.action, item.referenceId, item.detail]
+        .some((value) => String(value || '').toLowerCase().includes(normalizedSearch));
+    });
+    const auditEmptyMessage = normalizedSearch ? 'No results found.' : emptyMessage;
+    setText('auditSearchStatus', `${filteredRecords.length} matching record${filteredRecords.length === 1 ? '' : 's'}`);
+    setHtml('auditBody', filteredRecords.length ? filteredRecords.map((item) => `
+      <tr>
+        <td style="white-space:nowrap">${window.AdminDashboardFormatters.escapeHtml(window.AdminDashboardFormatters.formatDate(item.timestamp))}</td>
+        <td>${window.AdminDashboardFormatters.escapeHtml(item.adminName || 'Admin')}</td>
+        <td><span class="ab ab-l">${window.AdminDashboardFormatters.escapeHtml(item.action || '')}</span></td>
+        <td style="font-size:11px;color:var(--ink-3)">${window.AdminDashboardFormatters.escapeHtml(item.referenceId || '')}</td>
+        <td>${window.AdminDashboardFormatters.escapeHtml(item.detail || '')}</td>
+      </tr>
+    `).join('') : `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-3)">${window.AdminDashboardFormatters.escapeHtml(auditEmptyMessage)}</td></tr>`);
+  }
+
   function setText(id, text) {
     const el = getEl(id);
     if (el) {
@@ -307,29 +329,33 @@
     return 'lo';
   }
 
-  function renderStaffRatingsTable(targetId, roleStats, filterLevel, searchTerm = '') {
+  function renderStaffRatingsTable(targetId, roleStats, filterLevel, searchTerm = '', roleView = 'active') {
     const esc = window.AdminDashboardFormatters.escapeHtml;
-    let rows = roleStats;
+    let rows = roleView === 'all'
+      ? roleStats
+      : roleStats.filter((role) => roleView === 'archived' ? role.isActive === false : role.isActive !== false);
     if (filterLevel && filterLevel !== 'all') {
       rows = rows.filter((role) => classifyRoleLevel(role.average) === filterLevel);
     }
     const normalizedSearch = String(searchTerm).trim().toLowerCase();
     if (normalizedSearch) {
-      // Staff Ratings is role-based: search only the canonical role label,
-      // never a feedback respondent or a staff-management record.
-      rows = rows.filter((role) => role.label.toLowerCase().includes(normalizedSearch));
+      rows = rows.filter((role) => [role.label, role.key]
+        .some((value) => String(value || '').toLowerCase().includes(normalizedSearch)));
     }
 
     if (!rows.length) {
-      setHtml(targetId, '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--ink-3)">No staff roles match the selected filter or search.</td></tr>');
+      const emptyMessage = normalizedSearch ? 'No results found.' : 'No staff roles match the selected filter.';
+      setText('staffSearchStatus', '0 matching staff roles');
+      setHtml(targetId, `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--ink-3)">${esc(emptyMessage)}</td></tr>`);
       return;
     }
+    setText('staffSearchStatus', `${rows.length} matching staff role${rows.length === 1 ? '' : 's'}`);
 
     const html = rows.map((role) => {
       const scoreClass = ratingScoreClass(role.average);
       const avgDisplay = role.average === null ? '—' : `${role.average.toFixed(1)} / 5.0`;
       const inactiveTag = role.isActive === false
-        ? ' <span class="pill pill-red" style="font-size:10px;padding:2px 8px">Inactive</span>'
+        ? ' <span class="pill pill-red" style="font-size:10px;padding:2px 8px">Archived</span>'
         : '';
       return `
         <tr>
@@ -347,7 +373,9 @@
               <button type="button" class="actions-btn" onclick="toggleActions(this)" title="Staff role actions"><i class="fas fa-ellipsis-v"></i></button>
               <div class="dropdown-menu">
                 <button class="dropdown-item" onclick="openEditStaffRoleModal(${role.id})"><i class="fas fa-edit"></i> Edit</button>
-                <button class="dropdown-item text-red" onclick="openDeleteStaffRoleModal(${role.id})"><i class="fas fa-trash"></i> Delete</button>
+                ${role.isActive === false
+                  ? `<button class="dropdown-item" onclick="restoreStaffRole(${role.id})"><i class="fas fa-rotate-left"></i> Restore</button>`
+                  : `<button class="dropdown-item text-red" onclick="openArchiveStaffRoleModal(${role.id})"><i class="fas fa-box-archive"></i> Archive</button>`}
               </div>
             </div>
           </td>
@@ -407,14 +435,24 @@
 
     const serviceRatingFilter = window.AdminDashboardServiceFilter || 'all';
     const serviceStatusFilter = getEl('serviceStatusFilter')?.value || 'active';
+    const serviceSearch = String(getEl('serviceSearch')?.value || '').trim().toLowerCase();
     const serviceRowsData = services.filter((item) => {
       if (serviceStatusFilter !== 'all' && item.status !== serviceStatusFilter) return false;
+      if (serviceSearch) {
+        const searchableNames = [
+          item.name,
+          ...(Array.isArray(item.subserviceNames) ? item.subserviceNames : []),
+          ...(Array.isArray(item.subservices) ? item.subservices.map((subservice) => subservice.name) : []),
+        ];
+        if (!searchableNames.some((name) => String(name || '').toLowerCase().includes(serviceSearch))) return false;
+      }
       const average = Number(item.averageRating ?? 0);
       if (serviceRatingFilter === 'high') return average >= 4;
       if (serviceRatingFilter === 'mid') return average >= 3 && average < 4;
       if (serviceRatingFilter === 'low') return average > 0 && average < 3;
       return true;
     });
+    setText('serviceSearchStatus', `${serviceRowsData.length} matching service${serviceRowsData.length === 1 ? '' : 's'}`);
     const serviceRows = serviceRowsData.length ? serviceRowsData.map((item, index) => {
       const avg = Number(item.averageRating ?? 0);
       const scoreClass = avg >= 4 ? 'hi' : avg >= 3 ? 'mid' : 'lo';
@@ -423,72 +461,29 @@
         ? `<div style="font-size:11px;color:var(--ink-3);margin-top:4px">${subservices.length} subservices</div>`
         : '';
       const inactiveTag = item.status === 'inactive'
-        ? ' <span class="pill pill-red" style="font-size:10px;padding:2px 8px">Inactive</span>'
+        ? ' <span class="pill pill-red" style="font-size:10px;padding:2px 8px">Archived</span>'
         : '';
       const lifecycleAction = item.status === 'inactive'
-        ? `<button class="dropdown-item" onclick="reactivateService(${item.id})"><i class="fas fa-undo"></i> Reactivate</button>`
-        : `<button class="dropdown-item text-red" onclick="deleteService(${item.id})"><i class="fas fa-trash"></i> Deactivate</button>`;
-      const permanentDeleteAction = `<button class="dropdown-item text-red" onclick="permanentlyDeleteService(${item.id})"><i class="fas fa-trash-alt"></i> Delete</button>`;
+        ? `<button class="dropdown-item" onclick="restoreService(${item.id})"><i class="fas fa-undo"></i> Restore</button>`
+        : `<button class="dropdown-item text-red" onclick="archiveService(${item.id})"><i class="fas fa-box-archive"></i> Archive</button>`;
       return `
         <tr class="service-management-row">
           <td data-label="Service"><strong class="service-name">${window.AdminDashboardFormatters.escapeHtml(item.name || '')}</strong>${inactiveTag}${subtypeHtml}</td>
           <td data-label="Feedback" class="service-metric-cell"><span class="pill pill-blue service-feedback-count">${item.totalFeedback ?? 0}</span></td>
           <td style="text-align:center"><span class="score ${scoreClass}">${avg ? avg.toFixed(1) : '—'}</span></td>
-          <td data-label="Actions" class="service-action-cell"><div class="actions-dropdown"><button class="actions-btn" onclick="toggleActions(this)" aria-label="Actions for ${window.AdminDashboardFormatters.escapeHtml(item.name || 'service')}" aria-haspopup="true"><i class="fas fa-ellipsis-v"></i></button><div class="dropdown-menu"><button class="dropdown-item" onclick="openServiceModal(${item.id})"><i class="fas fa-edit"></i> Edit</button><button class="dropdown-item" onclick="manageSubservices(${item.id})"><i class="fas fa-list"></i> Manage Subservices</button>${lifecycleAction}${permanentDeleteAction}</div></div></td>
+          <td data-label="Actions" class="service-action-cell"><div class="actions-dropdown"><button class="actions-btn" onclick="toggleActions(this)" aria-label="Actions for ${window.AdminDashboardFormatters.escapeHtml(item.name || 'service')}" aria-haspopup="true"><i class="fas fa-ellipsis-v"></i></button><div class="dropdown-menu"><button class="dropdown-item" onclick="openServiceModal(${item.id})"><i class="fas fa-edit"></i> Edit</button><button class="dropdown-item" onclick="manageSubservices(${item.id})"><i class="fas fa-list"></i> Manage Subservices</button>${lifecycleAction}</div></div></td>
         </tr>`;
-    }).join('') : '<tr class="service-empty-row"><td colspan="4">No services match the selected filters.</td></tr>';
+    }).join('') : `<tr class="service-empty-row"><td colspan="4">${serviceSearch ? 'No results found.' : 'No services match the selected filters.'}</td></tr>`;
 
     // #staffBody belongs to the Staff Ratings page, rendered exclusively by
     // renderStaffTable() (js/admin/bootstrap.js) from real
     // feedback-derived stats — this function must not also write to it.
     setHtml('servicesTableBody', serviceRows);
 
-    const feedbackItems = entries
-      .filter((entry) => [entry.feedback, entry.appreciation, entry.suggestions].some(window.AdminDashboardFormatters.isWrittenText))
-      .sort((left, right) => new Date(right.timestamp || right.createdAt || 0) - new Date(left.timestamp || left.createdAt || 0))
-      .slice(0, 10);
-
-    const searchTerm = (document.getElementById('notifSearch')?.value || '').toLowerCase();
-    const filteredItems = searchTerm
-      ? feedbackItems.filter((entry) => {
-          const text = `${window.AdminDashboardFormatters.respondentCategoryLabel(entry.respondentCategory)} ${entry.service || ''} ${entry.name || ''} ${entry.feedback || ''} ${entry.appreciation || ''} ${entry.suggestions || ''}`.toLowerCase();
-          return text.includes(searchTerm);
-        })
-      : feedbackItems;
-
-    const fieldMarkup = (label, value) => window.AdminDashboardFormatters.isWrittenText(value)
-      ? `<div class="n-desc"><strong>${window.AdminDashboardFormatters.escapeHtml(label)}:</strong> ${window.AdminDashboardFormatters.escapeHtml(value)}</div>`
-      : '';
-    setHtml('dashboardNotifList', filteredItems.length ? filteredItems.map((entry) => {
-      const author = entry.name || 'Guest';
-      const title = `${window.AdminDashboardFormatters.respondentCategoryLabel(entry.respondentCategory)} Feedback · ${author}`;
-      const dateValue = entry.timestamp || entry.createdAt || '';
-      const isNegative = entry.sentimentLabel === 'Negative';
-      return `
-        <div class="notif-item${isNegative ? ' is-negative' : ''}">
-          <div class="notif-ic ${isNegative ? 'ic-red' : 'ic-blue'}"><i class="fas fa-comment-alt"></i></div>
-          <div class="n-body">
-            <div class="n-title">${window.AdminDashboardFormatters.escapeHtml(title)}</div>
-            <div class="n-desc">${window.AdminDashboardFormatters.escapeHtml(entry.service || 'No service selected')}</div>
-            ${fieldMarkup('Comment', entry.feedback)}
-            ${fieldMarkup('Name of Staff to Thank or Commend', entry.appreciation)}
-            ${fieldMarkup('Suggestion', entry.suggestions)}
-            <div class="n-time">${window.AdminDashboardFormatters.escapeHtml(window.AdminDashboardFormatters.formatDate(dateValue))}</div>
-          </div>
-        </div>
-      `;
-    }).join('') : '<div class="empty-state"><i class="fas fa-comment-dots"></i><p>No recent experience entries found.</p></div>');
+    if (!String(getEl('notifSearch')?.value || '').trim()) renderRecentComments(entries);
 
     const audit = Array.isArray(modules.audit) ? modules.audit : Object.values(modules.audit || {});
-    setHtml('auditBody', audit.length ? audit.map((item) => `
-      <tr>
-        <td style="white-space:nowrap">${window.AdminDashboardFormatters.escapeHtml(window.AdminDashboardFormatters.formatDate(item.timestamp))}</td>
-        <td>${window.AdminDashboardFormatters.escapeHtml(item.adminName || 'Admin')}</td>
-        <td><span class="ab ab-l">${window.AdminDashboardFormatters.escapeHtml(item.action || '')}</span></td>
-        <td style="font-size:11px;color:var(--ink-3)">${window.AdminDashboardFormatters.escapeHtml(item.referenceId || '')}</td>
-        <td>${window.AdminDashboardFormatters.escapeHtml(item.detail || '')}</td>
-      </tr>
-    `).join('') : '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-3)">No audit entries yet.</td></tr>');
+    renderAuditTable(audit);
 
     const comments = entries.filter((entry) => entry.feedback).slice(0, 3);
     setHtml('commentList', comments.length ? comments.map((entry) => `
@@ -523,6 +518,37 @@
     renderModules(snapshot);
   }
 
+  function renderRecentComments(entries, emptyMessage = 'No recent experience entries found.') {
+    const feedbackItems = entries
+      .filter((entry) => [entry.feedback, entry.appreciation, entry.suggestions].some(window.AdminDashboardFormatters.isWrittenText))
+      .sort((left, right) => new Date(right.timestamp || right.createdAt || 0) - new Date(left.timestamp || left.createdAt || 0))
+      .slice(0, 10);
+    const fieldMarkup = (label, value) => window.AdminDashboardFormatters.isWrittenText(value)
+      ? `<div class="n-desc"><strong>${window.AdminDashboardFormatters.escapeHtml(label)}:</strong> ${window.AdminDashboardFormatters.escapeHtml(value)}</div>`
+      : '';
+    setHtml('dashboardNotifList', feedbackItems.length ? feedbackItems.map((entry) => {
+      const author = entry.isAnonymous
+        ? 'Guest'
+        : entry.fullName || (entry.name !== 'Guest' ? entry.name : '') || 'Guest';
+      const title = `${window.AdminDashboardFormatters.respondentCategoryLabel(entry.respondentCategory)} Feedback · ${author}`;
+      const dateValue = entry.timestamp || entry.createdAt || '';
+      const isNegative = entry.sentimentLabel === 'Negative';
+      return `
+        <div class="notif-item${isNegative ? ' is-negative' : ''}">
+          <div class="notif-ic ${isNegative ? 'ic-red' : 'ic-blue'}"><i class="fas fa-comment-alt"></i></div>
+          <div class="n-body">
+            <div class="n-title">${window.AdminDashboardFormatters.escapeHtml(title)}</div>
+            <div class="n-desc">${window.AdminDashboardFormatters.escapeHtml(entry.service || 'No service selected')}</div>
+            ${fieldMarkup('Comment', entry.feedback)}
+            ${fieldMarkup('Name of Staff to Thank or Commend', entry.appreciation)}
+            ${fieldMarkup('Suggestion', entry.suggestions)}
+            <div class="n-time">${window.AdminDashboardFormatters.escapeHtml(window.AdminDashboardFormatters.formatDate(dateValue))}</div>
+          </div>
+        </div>
+      `;
+    }).join('') : `<div class="empty-state"><i class="fas fa-comment-dots"></i><p>${window.AdminDashboardFormatters.escapeHtml(emptyMessage)}</p></div>`);
+  }
+
   window.AdminDashboardRenderers = {
     renderKpis,
     renderAlerts,
@@ -533,9 +559,11 @@
     renderRespondentSummary,
     renderStaffRatingsTable,
     renderStaffOverallSummary,
+    renderAuditTable,
     renderFeedbackTable,
     renderFeedbackCards,
     renderRecentFeedback,
+    renderRecentComments,
     renderPendingResolved,
     renderModules,
     renderDashboard,

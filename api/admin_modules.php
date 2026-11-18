@@ -387,6 +387,67 @@ try {
     $pdo = getPdo();
 
     if ($method === 'GET') {
+        if ($section === 'audit') {
+            $date = trim((string) ($_GET['date'] ?? ''));
+            $dateFrom = trim((string) ($_GET['date_from'] ?? ''));
+            $dateTo = trim((string) ($_GET['date_to'] ?? ''));
+            $dates = ['date' => $date, 'start date' => $dateFrom, 'end date' => $dateTo];
+
+            foreach ($dates as $label => $value) {
+                if ($value !== '' && (
+                    preg_match('/^\d{4}-\d{2}-\d{2}$/D', $value) !== 1
+                    || !checkdate((int) substr($value, 5, 2), (int) substr($value, 8, 2), (int) substr($value, 0, 4))
+                )) {
+                    adminJson(['success' => false, 'message' => 'A valid ' . $label . ' is required'], 422);
+                }
+            }
+
+            if ($date !== '' && ($dateFrom !== '' || $dateTo !== '')) {
+                adminJson(['success' => false, 'message' => 'Choose a specific date or a date range, not both'], 422);
+            }
+            if ($dateFrom !== '' && $dateTo !== '' && $dateFrom > $dateTo) {
+                adminJson(['success' => false, 'message' => 'Start date must be on or before end date'], 422);
+            }
+
+            $auditSql = "SELECT at.id, COALESCE(NULLIF(at.user_name, ''), 'Super Admin') AS admin_name, at.action,
+                                fe.reference_id AS reference_id, at.notes AS detail, at.created_at
+                         FROM audit_trail at
+                         LEFT JOIN feedback_entries fe ON fe.id = at.feedback_id AND at.feedback_id > 0
+                         WHERE at.action NOT IN ('staff_created', 'staff_updated', 'staff_archived')";
+            $auditParams = [];
+
+            if ($date !== '') {
+                $nextDate = (new DateTimeImmutable($date))->modify('+1 day')->format('Y-m-d');
+                $auditSql .= ' AND at.created_at >= :date_start AND at.created_at < :date_end';
+                $auditParams[':date_start'] = $date . ' 00:00:00';
+                $auditParams[':date_end'] = $nextDate . ' 00:00:00';
+            } else {
+                if ($dateFrom !== '') {
+                    $auditSql .= ' AND at.created_at >= :date_from';
+                    $auditParams[':date_from'] = $dateFrom . ' 00:00:00';
+                }
+                if ($dateTo !== '') {
+                    $nextDate = (new DateTimeImmutable($dateTo))->modify('+1 day')->format('Y-m-d');
+                    $auditSql .= ' AND at.created_at < :date_to';
+                    $auditParams[':date_to'] = $nextDate . ' 00:00:00';
+                }
+            }
+
+            $auditSql .= ' ORDER BY at.created_at DESC, at.id DESC';
+            $auditStmt = $pdo->prepare($auditSql);
+            $auditStmt->execute($auditParams);
+            $auditRows = array_map(static fn (array $row): array => [
+                'id' => (int) $row['id'],
+                'adminName' => (string) $row['admin_name'],
+                'action' => adminAuditActionLabel((string) $row['action']),
+                'referenceId' => (string) ($row['reference_id'] ?? ''),
+                'detail' => (string) $row['detail'],
+                'timestamp' => adminIsoTimestamp((string) $row['created_at']),
+            ], $auditStmt->fetchAll());
+
+            adminJson(['success' => true, 'data' => $auditRows]);
+        }
+
         if ($section === 'subservices') {
             $serviceId = filter_var($_GET['service_id'] ?? null, FILTER_VALIDATE_INT);
             if ($serviceId === false || $serviceId === null || $serviceId < 1) {
@@ -438,18 +499,23 @@ try {
              GROUP BY s.id, s.name, s.status
                ORDER BY s.id ASC"
         );
-           $subtypesStmt = $pdo->query(
-              "SELECT id, service_id, name
-               FROM service_subtypes
-               WHERE status = 'active'
-               ORDER BY CASE WHEN name = 'Other' THEN 1 ELSE 0 END, id ASC"
-           );
+        $subtypesStmt = $pdo->query(
+            "SELECT id, service_id, name, status
+             FROM service_subtypes
+             ORDER BY CASE WHEN name = 'Other' THEN 1 ELSE 0 END, id ASC"
+        );
         $subtypesByService = [];
+        $subserviceNamesByService = [];
         foreach ($subtypesStmt->fetchAll() as $subtype) {
-            $subtypesByService[(int) $subtype['service_id']][] = [
-                'id' => (int) $subtype['id'],
-                'name' => (string) $subtype['name'],
-            ];
+            $serviceId = (int) $subtype['service_id'];
+            $name = (string) $subtype['name'];
+            $subserviceNamesByService[$serviceId][] = $name;
+            if ($subtype['status'] === 'active') {
+                $subtypesByService[$serviceId][] = [
+                    'id' => (int) $subtype['id'],
+                    'name' => $name,
+                ];
+            }
         }
 
         // Staff Ratings catalog — the 10 fixed st0-st9 role rows (full_name
@@ -463,7 +529,7 @@ try {
         // management history is intentionally excluded; no staff-management
         // feature is part of this log.
         $auditStmt = $pdo->query(
-            "SELECT at.id, 'Super Admin' AS admin_name, at.action,
+            "SELECT at.id, COALESCE(NULLIF(at.user_name, ''), 'Super Admin') AS admin_name, at.action,
                     fe.reference_id AS reference_id, at.notes AS detail, at.created_at
              FROM audit_trail at
              LEFT JOIN feedback_entries fe ON fe.id = at.feedback_id AND at.feedback_id > 0
@@ -479,6 +545,7 @@ try {
             'totalFeedback' => (int) $row['total_feedback'],
             'averageRating' => (float) $row['avg_rating'],
             'subservices' => $subtypesByService[(int) $row['id']] ?? [],
+            'subserviceNames' => $subserviceNamesByService[(int) $row['id']] ?? [],
         ], $servicesStmt->fetchAll());
 
         $payload['staffRoles'] = array_map(static fn (array $row): array => [
@@ -512,7 +579,7 @@ try {
 
         $payload['audit'] = array_map(static fn (array $row): array => [
             'id' => (int) $row['id'],
-            'adminName' => 'Super Admin',
+            'adminName' => (string) $row['admin_name'],
             'action' => adminAuditActionLabel((string) $row['action']),
             'referenceId' => (string) ($row['reference_id'] ?? ''),
             'detail' => (string) $row['detail'],

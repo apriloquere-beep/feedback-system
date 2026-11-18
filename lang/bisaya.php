@@ -353,6 +353,7 @@ return [
     'fb2_suggestionLabel' => 'Sugyot (opsyonal)',
     'fb2_suggestionPlaceholder' => 'Ipaambit ang usa ka sugyot aron mapaayo ang serbisyo.',
     'fb2_consentText' => 'Mosayon ako nga ang akong mga tubag gamiton sa pagpabuti sa serbisyo sa pasilidad. Nasabtan ko nga kini <strong>kompidensyal</strong> ug dili ipaambit ng walang pahintulot.',
+    'fb2_viewFullDataPrivacy' => 'Tan-awa ang Tibuok Pahibalo sa Data Privacy',
     'fb2_btnClear' => 'I-clear ang Tanan',
     'fb2_btnSubmit' => 'Ipadala ang Survey →',
     'fb2_btnSubmitting' => 'Nagpadala…',
